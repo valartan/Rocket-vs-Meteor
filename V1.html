@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ballon esquive - Fusée et météorites</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden; background: #001122;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+      background: linear-gradient(to top, #000000, #222222);
+    }
+    #rejouer {
+      position: absolute;
+      top: 75%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 36px;
+      color: white;
+      background: transparent;
+      border: 2px solid white;
+      padding: 10px 30px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: none;
+      z-index: 10;
+    }
+    #rejouer:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    #gameOverText {
+      position: absolute;
+      top: 55%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 48px;
+      color: white;
+      text-shadow: 0 0 8px #ff0000;
+      display: none;
+      z-index: 10;
+    }
+    #scoreboard {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      color: white;
+      font-size: 24px;
+      z-index: 10;
+    }
+    #highScoreInput {
+      position: absolute;
+      top: 62%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 11;
+      color: white;
+      text-align: center;
+    }
+    #highScoreInput input {
+      padding: 10px;
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    #leaderboard {
+      position: absolute;
+      top: 10%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.5);
+      padding: 20px;
+      border-radius: 10px;
+      color: white;
+      font-size: 20px;
+      display: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="scoreboard">Score: 0 | Temps: 0s</div>
+  <div id="gameOverText">GAME OVER</div>
+  <button id="rejouer">Rejouer</button>
+  <div id="highScoreInput">
+    <div>Nouveau record ! Entrez votre nom :</div>
+    <input type="text" id="playerName" placeholder="Votre nom" />
+    <button id="submitScore">Valider</button>
+  </div>
+  <div id="leaderboard"></div>
+  <script>
+    (() => {
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const rejouerBtn = document.getElementById("rejouer");
+      const gameOverText = document.getElementById("gameOverText");
+      const scoreboard = document.getElementById("scoreboard");
+      const highScoreInput = document.getElementById("highScoreInput");
+      const playerNameInput = document.getElementById("playerName");
+      const submitScore = document.getElementById("submitScore");
+      const leaderboard = document.getElementById("leaderboard");
+
+      let width, height;
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      const player = {
+        x: 150,
+        y: height / 2,
+        radius: 25,
+        velocityY: 0,
+        gravityUp: -0.8,
+        gravityDown: 1.5,
+      };
+
+      let pressing = false;
+      window.addEventListener("keydown", e => {
+        if (e.code === "Space") pressing = true;
+      });
+      window.addEventListener("keyup", e => {
+        if (e.code === "Space") pressing = false;
+      });
+
+      let bubbles = [];
+      let frameCount = 0;
+      let gameOver = false;
+      let score = 0;
+      let startTime = 0;
+
+      const maxDifficultyTime = 40;
+
+      function createBubble(speed) {
+        const radius = 15 + Math.random() * 25;
+        const y = radius + Math.random() * (height - 2 * radius);
+        bubbles.push({
+          x: width + radius,
+          y,
+          radius,
+          speed,
+          direction: Math.random() < 0.5 ? 1 : -1,
+          floatSpeed: 1 + Math.random() * 2,
+        });
+      }
+
+      function isColliding(c, b) {
+        const dx = c.x - b.x;
+        const dy = c.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        return dist < c.radius + b.radius;
+      }
+
+      function drawRocket(x, y, radius) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2);
+
+        ctx.fillStyle = "#ccc";
+        ctx.beginPath();
+        ctx.moveTo(0, -radius);
+        ctx.lineTo(radius * 0.6, radius);
+        ctx.lineTo(-radius * 0.6, radius);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#999";
+        ctx.stroke();
+
+        ctx.fillStyle = "#00f";
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "orange";
+        ctx.beginPath();
+        ctx.moveTo(-radius * 0.3, radius);
+        ctx.lineTo(0, radius + radius * 0.8);
+        ctx.lineTo(radius * 0.3, radius);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawMeteorite(bubble) {
+        const {x, y, radius} = bubble;
+        ctx.fillStyle = "#654321";
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#3e2a1c";
+        for (let i = 0; i < 3; i++) {
+          const cx = x + (Math.random() - 0.5) * radius;
+          const cy = y + (Math.random() - 0.5) * radius;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function getHighScores() {
+        return JSON.parse(localStorage.getItem("highScores") || "[]");
+      }
+
+      function checkIfHighScore(score) {
+        const scores = getHighScores();
+        if (scores.length < 5) return true;
+        return score > Math.min(...scores.map(s => s.score));
+      }
+
+      function saveHighScore(name, score) {
+        let scores = getHighScores();
+        scores.push({ name, score });
+        scores.sort((a, b) => b.score - a.score);
+        scores = scores.slice(0, 5);
+        localStorage.setItem("highScores", JSON.stringify(scores));
+      }
+
+      function displayLeaderboard() {
+        const scores = getHighScores();
+        leaderboard.innerHTML = "<h3>Top 5 Scores</h3><ol>" + scores.map(s => `<li>${s.name}: ${s.score}</li>`).join('') + "</ol>";
+        leaderboard.style.display = "block";
+      }
+
+      function resetGame() {
+        bubbles = [];
+        frameCount = 0;
+        gameOver = false;
+        score = 0;
+        startTime = performance.now();
+        player.y = height / 2;
+        player.velocityY = 0;
+        rejouerBtn.style.display = "none";
+        gameOverText.style.display = "none";
+        leaderboard.style.display = "none";
+        highScoreInput.style.display = "none";
+        playerNameInput.value = "";
+      }
+
+      submitScore.onclick = () => {
+        const name = playerNameInput.value.trim();
+        if (name) {
+          saveHighScore(name, score);
+          highScoreInput.style.display = "none";
+          displayLeaderboard();
+          rejouerBtn.style.display = "block";
+        }
+      };
+
+      rejouerBtn.onclick = () => {
+        resetGame();
+        gameLoop();
+      };
+
+      function gameLoop(timestamp) {
+        ctx.clearRect(0, 0, width, height);
+
+        const elapsed = (timestamp - startTime) / 1000;
+        let baseSpeed = elapsed < maxDifficultyTime ? 10 + (elapsed / maxDifficultyTime) * 10 : 20;
+
+        if(frameCount % 15 === 0 && bubbles.length < 30 && !gameOver) {
+          createBubble(baseSpeed);
+        }
+
+        for(let i = bubbles.length - 1; i >= 0; i--) {
+          const b = bubbles[i];
+          b.x -= b.speed;
+          b.y += b.direction * b.floatSpeed;
+          if(b.y > height - b.radius || b.y < b.radius) b.direction *= -1;
+          if(b.x + b.radius < 0) bubbles.splice(i, 1);
+        }
+
+        player.velocityY += pressing ? player.gravityDown : player.gravityUp;
+        player.velocityY = Math.max(Math.min(player.velocityY, 6), -4);
+        player.y += player.velocityY;
+
+        if(player.y - player.radius <= 0 || player.y + player.radius >= height) {
+          gameOver = true;
+        }
+
+        bubbles.forEach(drawMeteorite);
+        drawRocket(player.x, player.y, player.radius);
+
+        for(let i = bubbles.length - 1; i >= 0; i--) {
+          if(isColliding(player, bubbles[i])) {
+            gameOver = true;
+            bubbles.splice(i, 1);
+          }
+        }
+
+        scoreboard.textContent = `Score: ${score} | Temps: ${elapsed.toFixed(1)}s`;
+
+        frameCount++;
+        if (!gameOver) {
+          requestAnimationFrame(gameLoop);
+        } else {
+          gameOverText.style.display = "block";
+          if (checkIfHighScore(score)) {
+            highScoreInput.style.display = "block";
+          } else {
+            displayLeaderboard();
+            rejouerBtn.style.display = "block";
+          }
+        }
+      }
+
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
