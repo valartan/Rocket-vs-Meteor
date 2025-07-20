@@ -77,8 +77,8 @@
   }));
 
   function createBubble(speed) {
-    const base = isMobile ? 15 : 25;
-const extra = isMobile ? 10 : 15;
+    const base = isMobile ? 5 : 15;
+const extra = isMobile ? 5 : 10;
 const radius = Math.random() * extra + base;
 
     const y = radius + Math.random() * (height - 2 * radius);
