@@ -215,7 +215,7 @@ function displayLeaderboard() {
   player.gravityDown = isMobile ? 0.6 : 0.9;
   player.gravityUp = isMobile ? -0.6 : -0.8;
   player.maxSpeed = isMobile ? 4 : 6;
-  player.radius = isMobile ? 18 : 25;
+  player.radius = isMobile ? 10 : 15;
 
     bubbles = [];
     particles = [];
