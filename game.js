@@ -284,7 +284,7 @@ distanceDisplay.style.display = "block";
 const baseSpeed = (elapsed < maxDifficultyTime ? 10 + (elapsed / maxDifficultyTime) * 10 : 20) * speedFactor;
 
 
-    const spawnRate = isMobile ? 20 : 15;
+    const spawnRate = isMobile ? 30 : 15;
 if (frameCount % spawnRate === 0 && bubbles.length < 30 && !gameOver) {
   createBubble(baseSpeed);
 }
