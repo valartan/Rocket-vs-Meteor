@@ -280,7 +280,7 @@ distanceDisplay.style.display = "block";
     drawStars();
 
     const elapsed = (timestamp - startTime) / 1000;
-    const speedFactor = isMobile ? 0.7 : 1; // 📱 Ralentit de 30% sur mobile
+    const speedFactor = isMobile ? 0.5 : 1; // 📱 Ralentit de 30% sur mobile
 const baseSpeed = (elapsed < maxDifficultyTime ? 10 + (elapsed / maxDifficultyTime) * 10 : 20) * speedFactor;
 
 
