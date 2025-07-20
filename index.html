@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>AstroLab</title>
+
+  <!-- 🔗 Lien vers le manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#001122" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 📱 Icône pour l’installation (facultatif mais recommandé) -->
+  
+  
+<link rel="apple-touch-icon" href="/icon-180.png">
+
+
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      background: linear-gradient(to top, #001122, #002233);
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+    }
+
+    canvas {
+      display: block;
+      background: linear-gradient(to top, #000000, #222222);
+    }
+
+    #gameTitle {
+      font-size: 48px;
+      color: white;
+      text-shadow: 2px 2px 4px black;
+      margin-bottom: 20px;
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+      user-select: none; /* empêche la sélection du texte */
+    }
+
+    #playButton, #rejouer, #shareScore, #submitScore {
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+      font-weight: bold; 
+      font-size: 28px;
+      padding: 12px 30px;
+      color: black;
+      background: #ffaa00;
+      border: 4px solid black;
+      border-radius: 15px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 black;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-transform: uppercase;
+    }
+
+    #playButton:hover,
+    #rejouer:hover,
+    #shareScore:hover,
+    #submitScore:hover {
+      background: #ff8800;
+      transform: translateY(-2px);
+      box-shadow: 6px 6px 0 black;
+    }
+
+    #menu {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;/* plus haut que #menuStars */
+      text-align: center;
+    }
+
+    #menuImage {
+      display: block;
+      margin: 0 auto 50px auto;
+      max-width: 200px;
+      width: 50vw;
+      height: auto;
+      max-height: 150px;
+      object-fit: contain;
+    }
+
+    #distance {
+      position: absolute;
+      top: 10px;
+      left: 20px;
+      color: #003300;
+      font-size: 24px;
+      background: #b6fcb6;
+      padding: 10px 20px;
+      border-radius: 15px;
+      border: 3px solid black;
+      box-shadow: 3px 3px 0 black;
+      z-index: 10;
+      font-weight: bold;
+    }
+
+    #gameOverText {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 48px;
+      color: #ff3b3b;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      display: none;
+      z-index: 16;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+    }
+
+    #highScoreInput {
+      position: absolute;
+      top: 62%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      z-index: 17;
+      background: #fff;
+      color: black;
+      padding: 20px;
+      border-radius: 20px;
+      border: 4px solid black;
+      box-shadow: 4px 4px 0 black;
+      text-align: center;
+    }
+
+    #highScoreInput input {
+      padding: 10px;
+      font-size: 20px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: 2px solid black;
+      text-align: center;
+      width: 200px;
+    }
+
+    #leaderboard {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fffbe6;
+      padding: 20px;
+      border-radius: 20px;
+      border: 4px solid black;
+      color: #222;
+      font-size: 18px;
+      max-width: 260px;
+      z-index: 14;
+      display: none;
+      text-align: center;
+      box-shadow: 4px 4px 0 black;
+    }
+
+    #leaderboard h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 22px;
+      color: black;
+      text-shadow: 1px 1px 0 black;
+    }
+
+    #leaderboard ol {
+      padding-left: 20px;
+      margin: 0;
+      text-align: left;
+      font-weight: bold;
+    }
+
+    #shareScore {
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+      font-weight: bold;
+      position: absolute;
+      top: 80%;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: 3px solid black;
+      background: #00cfcf;
+      color: black;
+      cursor: pointer;
+      display: none;
+      box-shadow: 3px 3px 0 black;
+    }
+
+    #shareScore:hover {
+      background: #00cfcf;
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 6px 6px 0 black;
+    }
+
+    #success-banner {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.85);
+      color: #00ffcc;
+      padding: 12px 24px;
+      border-radius: 16px;
+      font-size: 20px;
+      font-weight: bold;
+      display: none;
+      z-index: 999;
+      box-shadow: 0 0 12px rgba(0, 255, 204, 0.5);
+      text-align: center;
+    }
+
+    #rejouer {
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+      position: absolute;
+      top: calc(55% + 100px);
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      padding: 12px 30px;
+      color: black;
+      background: #ffaa00;
+      border: 4px solid black;
+      border-radius: 15px;
+      cursor: pointer;
+      box-shadow: 4px 4px 0 black;
+      text-transform: uppercase;
+      display: none;
+      z-index: 15;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    #rejouer:hover {
+      background: #ff8800;
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 6px 6px 0 black;
+    }
+#menuStars {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  background: #001122;
+}
+/* 🎯 Responsive : adaptation automatique pour mobile */
+@media (max-width: 768px) {
+  #playButton {
+    font-size: 20px;
+    padding: 10px 25px;
+    width: auto; /* ou fixe si tu veux */
+  }
+  
+  #rejouer {
+    font-size: 18px;
+    padding: 8px 20px;
+    width: auto;
+  }
+  
+  #shareScore {
+    font-size: 16px;
+    padding: 10px 22px;
+    width: auto;
+  }
+  
+  #leaderboard {
+    max-width: 90vw;
+    font-size: 16px;
+    padding: 15px;
+  }
+
+  /* Exemple pour game over */
+  #gameOverText {
+    font-size: 32px;
+  }
+}
+
+
+  </style>
+</head>
+<body>
+<canvas id="menuStars"></canvas>
+
+  <div id="menu">
+    <h1 id="gameTitle">AstroLab</h1>
+    <img id="menuImage" src="menu.png" alt="Image menu" />
+    <button id="playButton">Jouer</button>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="distance">Distance: 0 m</div>
+
+  <div id="leaderboard">
+    <h3>Top 5 Distances</h3>
+    <ol></ol>
+  </div>
+
+  <div id="gameOverText">GAME OVER</div>
+
+  <button id="rejouer">Rejouer</button>
+
+  <button id="shareScore">Partager mon score</button>
+
+  <div id="highScoreInput">
+    <div>Nouveau record ! Entrez votre nom :</div>
+    <input type="text" id="playerName" placeholder="Votre nom" maxlength="15" />
+    <button id="submitScore">Valider</button>
+  </div>
+
+  <div id="success-banner"></div>
+
+  <script src="game.js"></script>
+
+  <!-- ✅ Enregistrement du Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("sw.js").then(
+          function (registration) {
+            console.log("✅ Service Worker enregistré :", registration);
+          },
+          function (err) {
+            console.error("❌ Erreur d'enregistrement du Service Worker :", err);
+          }
+        );
+      });
+    }
+  </script>
+</body>
+</html>
