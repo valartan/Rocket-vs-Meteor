@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Scratch by Number – 200x200 (Toggle + Pinceau large)</title>
+<title>Scratch by Number – 200x200 (Natural Drag)</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -49,9 +49,6 @@
     background: #000;
   }
 
-  #paletteDisplay {
-    margin-top: 4px;
-  }
   .palette-swatch {
     display: inline-block;
     width: 20px;
@@ -82,22 +79,17 @@
     color: #f5f5f5;
   }
 
-  .palette-buttons button .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.6);
-  }
-
   .palette-buttons button.selected {
     outline: 2px solid #fff;
     outline-offset: 1px;
     box-shadow: 0 0 8px rgba(255,255,255,0.5);
   }
 
-  .color-counts {
-    margin-top: 6px;
-    font-size: 12px;
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.6);
   }
 
   .color-counts-row {
@@ -105,27 +97,17 @@
     align-items: center;
     gap: 6px;
     margin-bottom: 2px;
-  }
-
-  .color-count-swatch {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid #000;
-  }
-
-  .progress-container {
-    margin-top: 8px;
+    font-size: 12px;
   }
 
   .progress-bar-outer {
     width: 280px;
-    max-width: 100%;
     height: 10px;
     border-radius: 999px;
     background: #333;
-    overflow: hidden;
+    margin-top: 6px;
     border: 1px solid #555;
+    overflow: hidden;
   }
 
   .progress-bar-inner {
@@ -136,95 +118,86 @@
   }
 
   .progress-text {
-    margin-top: 4px;
     font-size: 12px;
-  }
-
-  input[type="file"] {
     margin-top: 4px;
   }
 </style>
 </head>
 <body>
 
-<h1>Scratch by Number – Import & Grattage (200×200)</h1>
+<h1>Scratch by Number – 200×200 (Natural Drag)</h1>
+
 <div class="section">
-  <div>1. Choisis une image (PNG / JPG) :</div>
-  <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg">
+  <div>Choisir une image :</div>
+  <input type="file" id="fileInput" accept="image/png,image/jpeg">
 </div>
 
 <div class="section">
-  <h3>Aperçu pixelisé 200×200</h3>
+  <h3>Aperçu pixelisé</h3>
   <canvas id="pixelCanvas" width="200" height="200"></canvas>
 </div>
 
 <div class="section">
-  <h3>Palette réduite (max 15 couleurs)</h3>
+  <h3>Palette réduite</h3>
   <div id="paletteDisplay"></div>
 </div>
 
-<div class="section">
-  <h3>Scratch par numéro</h3>
-  Couleur active : <span id="activeColorLabel">aucune</span>
-  <div class="palette-buttons" id="paletteButtons"></div>
+<h3>Grattage</h3>
+Couleur active : <span id="activeColorLabel">aucune</span>
 
-  <div class="color-counts" id="colorCounts"></div>
+<div class="palette-buttons" id="paletteButtons"></div>
 
-  <div class="progress-container">
-    <div class="progress-bar-outer">
-      <div class="progress-bar-inner" id="progressInner"></div>
-    </div>
-    <div class="progress-text" id="progressText">Progression : 0%</div>
-  </div>
+<div id="colorCounts"></div>
 
-  <div id="grid"></div>
+<div class="progress-bar-outer">
+  <div class="progress-bar-inner" id="progressInner"></div>
 </div>
+<div class="progress-text" id="progressText">Progression : 0%</div>
+
+<div id="grid"></div>
 
 <script>
 // =======================================================================
 // CONFIGURATION
 // =======================================================================
-const SIZE       = 200;
+const SIZE = 200;
 const MAX_COLORS = 15;
-// 🔥 Pinceau plus large pour plus de fluidité : rayon 4 → 9x9
-const BRUSH_RAD  = 4;
+const BRUSH_RAD = 4; // 9x9 → très fluide
 
 let CURRENT_PALETTE = [];
-let CURRENT_LEVEL   = [];
-let CELLS           = [];
-let REVEALED        = [];
-let ACTIVE_INDEX    = null;
-let dragging        = false;
-let totalRevealed   = 0;
+let CURRENT_LEVEL = [];
+let CELLS = [];
+let REVEALED = [];
+let ACTIVE_INDEX = null;
+let dragging = false;
+let totalRevealed = 0;
 
-let countsByColor   = {};
+let countsByColor = {};
 let revealedByColor = {};
 
 const totalCells = SIZE * SIZE;
 
-// === ELEMENTS DOM ===
-const fileInput      = document.getElementById("fileInput");
-const canvas         = document.getElementById("pixelCanvas");
-const ctx            = canvas.getContext("2d");
+const fileInput = document.getElementById("fileInput");
+const canvas = document.getElementById("pixelCanvas");
+const ctx = canvas.getContext("2d");
 const paletteDisplay = document.getElementById("paletteDisplay");
-const paletteBtns    = document.getElementById("paletteButtons");
-const activeLabel    = document.getElementById("activeColorLabel");
-const colorCounts    = document.getElementById("colorCounts");
-const progressInner  = document.getElementById("progressInner");
-const progressText   = document.getElementById("progressText");
-const gridDiv        = document.getElementById("grid");
+const paletteBtns = document.getElementById("paletteButtons");
+const activeLabel = document.getElementById("activeColorLabel");
+const colorCountsDiv = document.getElementById("colorCounts");
+const progressInner = document.getElementById("progressInner");
+const progressText = document.getElementById("progressText");
+const gridDiv = document.getElementById("grid");
 
 
 // =======================================================================
 // IMPORT IMAGE
 // =======================================================================
-fileInput.addEventListener("change", function() {
-  const file = this.files[0];
-  if (!file) return alert("Aucun fichier sélectionné.");
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (!file) return;
 
   const img = new Image();
-  img.onload = function() {
-    ctx.clearRect(0, 0, SIZE, SIZE);
+  img.onload = () => {
     ctx.drawImage(img, 0, 0, SIZE, SIZE);
     processImage();
   };
@@ -233,16 +206,8 @@ fileInput.addEventListener("change", function() {
 
 
 // =======================================================================
-// UTILITAIRES COULEURS
+// UTILITAIRES
 // =======================================================================
-function getPixels() {
-  const d = ctx.getImageData(0, 0, SIZE, SIZE).data;
-  const arr = [];
-  for (let i=0;i<d.length;i+=4)
-    arr.push([d[i], d[i+1], d[i+2]]);
-  return arr;
-}
-
 function dist(a,b) {
   return Math.sqrt(
     (a[0]-b[0])**2 +
@@ -251,83 +216,81 @@ function dist(a,b) {
   );
 }
 
-// mini K-means
+function getPixels() {
+  const d = ctx.getImageData(0,0,SIZE,SIZE).data;
+  const out = [];
+  for (let i=0;i<d.length;i+=4)
+    out.push([d[i], d[i+1], d[i+2]]);
+  return out;
+}
+
 function reduceColors(pixels, max) {
-  const cent = [];
+  const centers = [];
   for (let i=0;i<max;i++)
-    cent.push([...pixels[Math.floor(Math.random()*pixels.length)]]);
+    centers.push([...pixels[Math.floor(Math.random()*pixels.length)]]);
 
-  for (let pass=0;pass<5;pass++) {
-    const grp = Array.from({length:max},()=>[]);
-
+  for (let iter=0; iter<5; iter++) {
+    const groups = Array.from({length:max},()=>[]);
     for (let p of pixels) {
       let best=0, bestD=Infinity;
-      for (let c=0;c<max;c++){
-        const d=dist(p,cent[c]);
+      for (let c=0;c<max;c++) {
+        const d=dist(p,centers[c]);
         if(d<bestD){bestD=d;best=c;}
       }
-      grp[best].push(p);
+      groups[best].push(p);
     }
-
-    for (let c=0;c<max;c++){
-      if(grp[c].length===0) continue;
+    for (let c=0;c<max;c++) {
+      if(groups[c].length===0) continue;
       let r=0,g=0,b=0;
-      for(let p of grp[c]){r+=p[0];g+=p[1];b+=p[2];}
-      cent[c]=[
-        Math.round(r/grp[c].length),
-        Math.round(g/grp[c].length),
-        Math.round(b/grp[c].length)
+      for(let p of groups[c]){r+=p[0];g+=p[1];b+=p[2];}
+      centers[c]=[
+        Math.round(r/groups[c].length),
+        Math.round(g/groups[c].length),
+        Math.round(b/groups[c].length)
       ];
     }
   }
-
-  return cent;
+  return centers;
 }
 
 function generateLevel(palette) {
-  const d = ctx.getImageData(0, 0, SIZE, SIZE).data;
-  const grid = [];
-  let i = 0;
-
-  for (let y=0;y<SIZE;y++){
+  const d = ctx.getImageData(0,0,SIZE,SIZE).data;
+  let idx=0;
+  const grid=[];
+  for(let y=0;y<SIZE;y++){
     const row=[];
     for(let x=0;x<SIZE;x++){
-      const r=d[i], g=d[i+1], b=d[i+2];
-      i+=4;
-
+      const r=d[idx], g=d[idx+1], b=d[idx+2];
+      idx+=4;
       let best=0, bestD=Infinity;
-      for(let c=0;c<palette.length;c++){
-        const D=dist([r,g,b],palette[c]);
-        if(D<bestD){bestD=D;best=c;}
+      for(let i=0;i<palette.length;i++){
+        const dd=dist([r,g,b],palette[i]);
+        if(dd<bestD){bestD=dd;best=i;}
       }
       row.push(best+1);
     }
     grid.push(row);
   }
-
   return grid;
 }
 
-function rgb(rgbArr) {
-  return `rgb(${rgbArr[0]},${rgbArr[1]},${rgbArr[2]})`;
-}
+function rgb(a){ return `rgb(${a[0]},${a[1]},${a[2]})`; }
 
 
 // =======================================================================
-// PIPELINE COMPLET
+// PIPELINE IMAGE
 // =======================================================================
 function processImage() {
-  const pixels  = getPixels();
+  const pixels = getPixels();
   const palette = reduceColors(pixels, MAX_COLORS);
-  const level   = generateLevel(palette);
+  const level = generateLevel(palette);
 
   CURRENT_PALETTE = palette;
-  CURRENT_LEVEL   = level;
+  CURRENT_LEVEL = level;
 
-  initCount(level);
-  buildPaletteUI(palette);
-  buildGrid(level);
-  resetReveal();
+  initCounters();
+  buildPaletteUI();
+  buildGrid();
 
   updateProgress();
   updateColorCounts();
@@ -337,8 +300,8 @@ function processImage() {
 // =======================================================================
 // COUNTERS
 // =======================================================================
-function initCount(level) {
-  countsByColor   = {};
+function initCounters() {
+  countsByColor = {};
   revealedByColor = {};
 
   for(let i=1;i<=CURRENT_PALETTE.length;i++){
@@ -352,37 +315,26 @@ function initCount(level) {
     }
   }
 
-  totalRevealed=0;
+  totalRevealed = 0;
 }
 
 function updateProgress() {
-  const pct = (totalRevealed / totalCells *100).toFixed(1);
-  progressInner.style.width = pct+"%";
-  progressText.textContent  = `Progression : ${pct}%`;
+  const pct = (totalRevealed / totalCells * 100).toFixed(1);
+  progressInner.style.width = pct + "%";
+  progressText.textContent = "Progression : " + pct + "%";
 }
 
 function updateColorCounts() {
-  colorCounts.innerHTML = "";
-  const N = CURRENT_PALETTE.length;
-
-  for(let i=1;i<=N;i++){
-    const total  = countsByColor[i];
-    const done   = revealedByColor[i];
-    const remain = total-done;
-
+  colorCountsDiv.innerHTML = "";
+  for(let i=1;i<=CURRENT_PALETTE.length;i++){
+    const remain = countsByColor[i] - revealedByColor[i];
     const row = document.createElement("div");
-    row.className="color-counts-row";
-
-    const sw = document.createElement("div");
-    sw.className="color-count-swatch";
-    sw.style.background = rgb(CURRENT_PALETTE[i-1]);
-
-    const label = document.createElement("span");
-    label.textContent = `#${i} : reste ${remain}`;
-
-    row.appendChild(sw);
-    row.appendChild(label);
-    colorCounts.appendChild(row);
+    row.className = "color-counts-row";
+    row.innerHTML =
+      `<div class="color-count-swatch" style="width:14px;height:14px;
+        background:${rgb(CURRENT_PALETTE[i-1])}"></div>
+       #${i} : reste ${remain}`;
+    colorCountsDiv.appendChild(row);
   }
 }
 
@@ -390,59 +342,47 @@ function updateColorCounts() {
 // =======================================================================
 // PALETTE UI
 // =======================================================================
-function buildPaletteUI(palette) {
-  paletteDisplay.innerHTML="";
-  paletteBtns.innerHTML="";
-  ACTIVE_INDEX=null;
-  activeLabel.textContent="aucune";
+function buildPaletteUI() {
+  paletteDisplay.innerHTML = "";
+  paletteBtns.innerHTML = "";
+  ACTIVE_INDEX = null;
+  activeLabel.textContent = "aucune";
 
-  // swatches
-  palette.forEach(rgbArr=>{
-    const sw=document.createElement("div");
+  CURRENT_PALETTE.forEach(col=>{
+    const sw = document.createElement("div");
     sw.className="palette-swatch";
-    sw.style.background=rgb(rgbArr);
+    sw.style.background = rgb(col);
     paletteDisplay.appendChild(sw);
   });
 
-  // boutons
-  palette.forEach((rgbArr, idx)=>{
-    const n=idx+1;
-
+  CURRENT_PALETTE.forEach((col, idx)=>{
+    const i=idx+1;
     const btn=document.createElement("button");
-    btn.dataset.index=n;
-
-    const dot=document.createElement("span");
-    dot.className="dot";
-    dot.style.background=rgb(rgbArr);
-
-    const txt=document.createElement("span");
-    txt.textContent=`#${n}`;
-
-    btn.appendChild(dot);
-    btn.appendChild(txt);
-
-    btn.addEventListener("click", ()=> selectColor(n));
+    btn.dataset.index=i;
+    btn.innerHTML =
+      `<span class="dot" style="background:${rgb(col)}"></span>#${i}`;
+    btn.onclick=()=>selectColor(i);
     paletteBtns.appendChild(btn);
   });
 }
 
-function selectColor(n) {
-  ACTIVE_INDEX=n;
-  activeLabel.textContent=n;
+function selectColor(i){
+  ACTIVE_INDEX = i;
+  activeLabel.textContent = i;
 
-  const btns=paletteBtns.querySelectorAll("button");
-  btns.forEach(b=>{
-    if(parseInt(b.dataset.index)===n) b.classList.add("selected");
-    else b.classList.remove("selected");
-  });
+  document.querySelectorAll(".palette-buttons button")
+    .forEach(btn=>{
+      btn.classList.toggle("selected",
+        parseInt(btn.dataset.index)===i);
+    });
 }
 
 
 // =======================================================================
-// GRILLE & RÉVÉLATION
+// GRILLE & GRATTAGE
 // =======================================================================
-function buildGrid(level) {
-  gridDiv.innerHTML="";
+function buildGrid() {
+  gridDiv.innerHTML = "";
   CELLS=[];
   REVEALED=[];
 
@@ -463,33 +403,19 @@ function buildGrid(level) {
   }
 }
 
-function resetReveal() {
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      REVEALED[r][c]=false;
-      CELLS[r][c].style.background="#000";
-    }
-  }
-  for(let k in revealedByColor) revealedByColor[k]=0;
-  totalRevealed=0;
-}
-
-// Révéler un pixel si c'est la bonne couleur
-function revealOne(r,c) {
+function revealOne(r,c){
   if(r<0||c<0||r>=SIZE||c>=SIZE) return;
-  if(ACTIVE_INDEX==null) return;
   if(REVEALED[r][c]) return;
+  if(ACTIVE_INDEX==null) return;
   if(CURRENT_LEVEL[r][c]!==ACTIVE_INDEX) return;
 
   REVEALED[r][c]=true;
   CELLS[r][c].style.background = rgb(CURRENT_PALETTE[ACTIVE_INDEX-1]);
-
   revealedByColor[ACTIVE_INDEX]++;
   totalRevealed++;
 }
 
-// Pinceau : gros carré autour du point (rayon 4 → 9x9)
-function revealBrush(r,c) {
+function revealBrush(r,c){
   for(let dy=-BRUSH_RAD;dy<=BRUSH_RAD;dy++){
     for(let dx=-BRUSH_RAD;dx<=BRUSH_RAD;dx++){
       revealOne(r+dy, c+dx);
@@ -501,45 +427,47 @@ function revealBrush(r,c) {
 
 
 // =======================================================================
-// GRATTAGE MODE TOGGLE (souris + mobile)
+// GRATTAGE NATUREL (mousedown + move + mouseup)
 // =======================================================================
-gridDiv.style.userSelect = "none"; // éviter sélection texte
+gridDiv.style.userSelect="none";
 
-// --- SOURIS ---
-gridDiv.addEventListener("mousedown", (e) => {
-  // toggle ON / OFF
-  dragging = !dragging;
-  if (dragging) handlePointer(e.clientX, e.clientY);
+// Souris
+gridDiv.addEventListener("mousedown", e=>{
+  dragging=true;
+  handlePointer(e.clientX,e.clientY);
+});
+document.addEventListener("mouseup", ()=> dragging=false);
+gridDiv.addEventListener("mousemove", e=>{
+  if(dragging) handlePointer(e.clientX,e.clientY);
 });
 
-gridDiv.addEventListener("mousemove", (e) => {
-  if (dragging) handlePointer(e.clientX, e.clientY);
-});
-
-// --- TOUCH (mobile) ---
-gridDiv.addEventListener("touchstart", (e) => {
-  dragging = !dragging;
-  const t = e.touches[0];
-  if (dragging) handlePointer(t.clientX, t.clientY);
-  e.preventDefault();
-}, {passive:false});
-
-gridDiv.addEventListener("touchmove", (e) => {
-  if (!dragging) return;
+// Mobile
+gridDiv.addEventListener("touchstart", e=>{
+  dragging=true;
   const t=e.touches[0];
   handlePointer(t.clientX,t.clientY);
   e.preventDefault();
-}, {passive:false});
+},{passive:false});
+gridDiv.addEventListener("touchmove", e=>{
+  if(!dragging) return;
+  const t=e.touches[0];
+  handlePointer(t.clientX,t.clientY);
+  e.preventDefault();
+},{passive:false});
+document.addEventListener("touchend", ()=> dragging=false);
 
-function handlePointer(x, y) {
-  const elem = document.elementFromPoint(x, y);
-  if (!elem || !elem.classList.contains("cell")) return;
-  const r = parseInt(elem.dataset.r);
-  const c = parseInt(elem.dataset.c);
-  revealBrush(r, c);
+
+// =======================================================================
+// POSITION → CELL
+// =======================================================================
+function handlePointer(x,y){
+  const elem=document.elementFromPoint(x,y);
+  if(!elem || !elem.classList.contains("cell")) return;
+  const r=parseInt(elem.dataset.r);
+  const c=parseInt(elem.dataset.c);
+  revealBrush(r,c);
 }
-</script>
 
+</script>
 </body>
 </html>
-
