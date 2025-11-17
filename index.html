@@ -1,353 +1,545 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>AstroLab</title>
-
-  <!-- 🔗 Lien vers le manifest -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#001122" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- 📱 Icône pour l’installation (facultatif mais recommandé) -->
-  
-  
-<link rel="apple-touch-icon" href="/icon-180.png">
-
-
-  <style>
-    html, body {
-      margin: 0; padding: 0; overflow: hidden;
-      background: linear-gradient(to top, #001122, #002233);
-      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-    }
-
-    canvas {
-      display: block;
-      background: linear-gradient(to top, #000000, #222222);
-    }
-
-    #gameTitle {
-      font-size: 48px;
-      color: white;
-      text-shadow: 2px 2px 4px black;
-      margin-bottom: 20px;
-      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-      user-select: none; /* empêche la sélection du texte */
-    }
-
-    #playButton, #rejouer, #shareScore, #submitScore {
-      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-      font-weight: bold; 
-      font-size: 28px;
-      padding: 12px 30px;
-      color: black;
-      background: #ffaa00;
-      border: 4px solid black;
-      border-radius: 15px;
-      cursor: pointer;
-      box-shadow: 4px 4px 0 black;
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-transform: uppercase;
-    }
-
-    #playButton:hover,
-    #rejouer:hover,
-    #shareScore:hover,
-    #submitScore:hover {
-      background: #ff8800;
-      transform: translateY(-2px);
-      box-shadow: 6px 6px 0 black;
-    }
-
-    #menu {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 10;/* plus haut que #menuStars */
-      text-align: center;
-    }
-
-    #menuImage {
-      display: block;
-      margin: 0 auto 50px auto;
-      max-width: 200px;
-      width: 50vw;
-      height: auto;
-      max-height: 150px;
-      object-fit: contain;
-    }
-
-    #distance {
-      position: absolute;
-      top: 10px;
-      left: 20px;
-      color: #003300;
-      font-size: 24px;
-      background: #b6fcb6;
-      padding: 10px 20px;
-      border-radius: 15px;
-      border: 3px solid black;
-      box-shadow: 3px 3px 0 black;
-      z-index: 10;
-      font-weight: bold;
-    }
-
-    #gameOverText {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 48px;
-      color: #ff3b3b;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
-      border-radius: 0;
-      padding: 0;
-      box-shadow: none;
-      display: none;
-      z-index: 16;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: translateX(-50%) scale(1); }
-      50% { transform: translateX(-50%) scale(1.05); }
-    }
-
-    #highScoreInput {
-      position: absolute;
-      top: 62%;
-      left: 50%;
-      transform: translateX(-50%);
-      display: none;
-      z-index: 17;
-      background: #fff;
-      color: black;
-      padding: 20px;
-      border-radius: 20px;
-      border: 4px solid black;
-      box-shadow: 4px 4px 0 black;
-      text-align: center;
-    }
-
-    #highScoreInput input {
-      padding: 10px;
-      font-size: 20px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: 2px solid black;
-      text-align: center;
-      width: 200px;
-    }
-
-    #leaderboard {
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fffbe6;
-      padding: 20px;
-      border-radius: 20px;
-      border: 4px solid black;
-      color: #222;
-      font-size: 18px;
-      max-width: 260px;
-      z-index: 14;
-      display: none;
-      text-align: center;
-      box-shadow: 4px 4px 0 black;
-    }
-
-    #leaderboard h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 22px;
-      color: black;
-      text-shadow: 1px 1px 0 black;
-    }
-
-    #leaderboard ol {
-      padding-left: 20px;
-      margin: 0;
-      text-align: left;
-      font-weight: bold;
-    }
-
-    #shareScore {
-      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-      font-weight: bold;
-      position: absolute;
-      top: 80%;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 24px;
-      padding: 10px 20px;
-      border-radius: 12px;
-      border: 3px solid black;
-      background: #00cfcf;
-      color: black;
-      cursor: pointer;
-      display: none;
-      box-shadow: 3px 3px 0 black;
-    }
-
-    #shareScore:hover {
-      background: #00cfcf;
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow: 6px 6px 0 black;
-    }
-
-    #success-banner {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.85);
-      color: #00ffcc;
-      padding: 12px 24px;
-      border-radius: 16px;
-      font-size: 20px;
-      font-weight: bold;
-      display: none;
-      z-index: 999;
-      box-shadow: 0 0 12px rgba(0, 255, 204, 0.5);
-      text-align: center;
-    }
-
-    #rejouer {
-      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
-      position: absolute;
-      top: calc(55% + 100px);
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 28px;
-      padding: 12px 30px;
-      color: black;
-      background: #ffaa00;
-      border: 4px solid black;
-      border-radius: 15px;
-      cursor: pointer;
-      box-shadow: 4px 4px 0 black;
-      text-transform: uppercase;
-      display: none;
-      z-index: 15;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    #rejouer:hover {
-      background: #ff8800;
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow: 6px 6px 0 black;
-    }
-#menuStars {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  background: #001122;
-}
-/* Style général commun */
-#leaderboard,
-#gameOverText,
-#rejouer,
-#shareScore {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50%;  /* Ajustable */
-  max-width: 300px;
-  text-align: center;
-  }
-/* 🎯 Responsive : adaptation automatique pour mobile */
-@media (max-width: 768px) {
-  #playButton {
-    font-size: 20px;
-    padding: 10px 25px;
-    width: auto; /* ou fixe si tu veux */
-  }
-  
-  #rejouer {
-    top: 70%;!important
-    font-size: 18px;
-    padding: 8px 20px;
-    width: auto;
-  }
-  
-  #shareScore {
-    font-size: 16px;
-    padding: 10px 22px;
-    width: auto;
-  }
-  
-  #leaderboard {
-    top: 20%;!important
-    max-width: 90vw;
-    font-size: 16px;
-    padding: 15px;
+<meta charset="UTF-8">
+<title>Scratch by Number – 200x200 (Toggle + Pinceau large)</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 16px;
+    background: #111;
+    color: #f5f5f5;
   }
 
-  #gameOverText {
-    top: 55%; /* Ajuste cette valeur pour centrer */ !important
-    font-weight: bold;
-    font-size: 28px !important; /* garder taille mobile */
-    transform: translateX(-50%);
+  h1 {
+    margin-bottom: 4px;
   }
-}
 
+  .section {
+    margin-top: 14px;
+    margin-bottom: 10px;
+  }
 
-  </style>
+  #pixelCanvas {
+    image-rendering: pixelated;
+    width: 320px;
+    height: 320px;
+    border: 2px solid #333;
+    background: #222;
+    margin-top: 6px;
+    display: block;
+  }
+
+  #grid {
+    display: grid;
+    grid-template-columns: repeat(200, 3px);
+    grid-auto-rows: 3px;
+    gap: 1px;
+    margin-top: 10px;
+    touch-action: none;
+    background: #000;
+    padding: 4px;
+    border-radius: 8px;
+    max-width: calc(200 * 4px + 10px);
+  }
+
+  .cell {
+    width: 3px;
+    height: 3px;
+    background: #000;
+  }
+
+  #paletteDisplay {
+    margin-top: 4px;
+  }
+  .palette-swatch {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid #000;
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+
+  .palette-buttons {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .palette-buttons button {
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    cursor: pointer;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #222;
+    color: #f5f5f5;
+  }
+
+  .palette-buttons button .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.6);
+  }
+
+  .palette-buttons button.selected {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+    box-shadow: 0 0 8px rgba(255,255,255,0.5);
+  }
+
+  .color-counts {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .color-counts-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .color-count-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid #000;
+  }
+
+  .progress-container {
+    margin-top: 8px;
+  }
+
+  .progress-bar-outer {
+    width: 280px;
+    max-width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #333;
+    overflow: hidden;
+    border: 1px solid #555;
+  }
+
+  .progress-bar-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #52ff9f, #28aadc);
+    transition: width 0.15s ease-out;
+  }
+
+  .progress-text {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  input[type="file"] {
+    margin-top: 4px;
+  }
+</style>
 </head>
 <body>
-<canvas id="menuStars"></canvas>
 
-  <div id="menu">
-    <h1 id="gameTitle">AstroLab</h1>
-    <img id="menuImage" src="menu.png" alt="Image menu" />
-    <button id="playButton">Hard</button>
+<h1>Scratch by Number – Import & Grattage (200×200)</h1>
+<div class="section">
+  <div>1. Choisis une image (PNG / JPG) :</div>
+  <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg">
+</div>
+
+<div class="section">
+  <h3>Aperçu pixelisé 200×200</h3>
+  <canvas id="pixelCanvas" width="200" height="200"></canvas>
+</div>
+
+<div class="section">
+  <h3>Palette réduite (max 15 couleurs)</h3>
+  <div id="paletteDisplay"></div>
+</div>
+
+<div class="section">
+  <h3>Scratch par numéro</h3>
+  Couleur active : <span id="activeColorLabel">aucune</span>
+  <div class="palette-buttons" id="paletteButtons"></div>
+
+  <div class="color-counts" id="colorCounts"></div>
+
+  <div class="progress-container">
+    <div class="progress-bar-outer">
+      <div class="progress-bar-inner" id="progressInner"></div>
+    </div>
+    <div class="progress-text" id="progressText">Progression : 0%</div>
   </div>
 
-  <canvas id="game"></canvas>
+  <div id="grid"></div>
+</div>
 
-  <div id="distance">Distance: 0 m</div>
+<script>
+// =======================================================================
+// CONFIGURATION
+// =======================================================================
+const SIZE       = 200;
+const MAX_COLORS = 15;
+// 🔥 Pinceau plus large pour plus de fluidité : rayon 4 → 9x9
+const BRUSH_RAD  = 4;
 
-  <div id="leaderboard">
-    <h3>Top 5 Distances</h3>
-    <ol></ol>
-  </div>
+let CURRENT_PALETTE = [];
+let CURRENT_LEVEL   = [];
+let CELLS           = [];
+let REVEALED        = [];
+let ACTIVE_INDEX    = null;
+let dragging        = false;
+let totalRevealed   = 0;
 
-  <div id="gameOverText">GAME OVER</div>
+let countsByColor   = {};
+let revealedByColor = {};
 
-  <button id="rejouer">Rejouer</button>
+const totalCells = SIZE * SIZE;
 
-  <button id="shareScore">Partager mon score</button>
+// === ELEMENTS DOM ===
+const fileInput      = document.getElementById("fileInput");
+const canvas         = document.getElementById("pixelCanvas");
+const ctx            = canvas.getContext("2d");
+const paletteDisplay = document.getElementById("paletteDisplay");
+const paletteBtns    = document.getElementById("paletteButtons");
+const activeLabel    = document.getElementById("activeColorLabel");
+const colorCounts    = document.getElementById("colorCounts");
+const progressInner  = document.getElementById("progressInner");
+const progressText   = document.getElementById("progressText");
+const gridDiv        = document.getElementById("grid");
 
-  <div id="highScoreInput">
-    <div>Nouveau record ! Entrez votre nom :</div>
-    <input type="text" id="playerName" placeholder="Votre nom" maxlength="15" />
-    <button id="submitScore">Valider</button>
-  </div>
 
-  <div id="success-banner"></div>
+// =======================================================================
+// IMPORT IMAGE
+// =======================================================================
+fileInput.addEventListener("change", function() {
+  const file = this.files[0];
+  if (!file) return alert("Aucun fichier sélectionné.");
 
-  <script src="game.js"></script>
+  const img = new Image();
+  img.onload = function() {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.drawImage(img, 0, 0, SIZE, SIZE);
+    processImage();
+  };
+  img.src = URL.createObjectURL(file);
+});
 
-  <!-- ✅ Enregistrement du Service Worker -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", function () {
-        navigator.serviceWorker.register("sw.js").then(
-          function (registration) {
-            console.log("✅ Service Worker enregistré :", registration);
-          },
-          function (err) {
-            console.error("❌ Erreur d'enregistrement du Service Worker :", err);
-          }
-        );
-      });
+
+// =======================================================================
+// UTILITAIRES COULEURS
+// =======================================================================
+function getPixels() {
+  const d = ctx.getImageData(0, 0, SIZE, SIZE).data;
+  const arr = [];
+  for (let i=0;i<d.length;i+=4)
+    arr.push([d[i], d[i+1], d[i+2]]);
+  return arr;
+}
+
+function dist(a,b) {
+  return Math.sqrt(
+    (a[0]-b[0])**2 +
+    (a[1]-b[1])**2 +
+    (a[2]-b[2])**2
+  );
+}
+
+// mini K-means
+function reduceColors(pixels, max) {
+  const cent = [];
+  for (let i=0;i<max;i++)
+    cent.push([...pixels[Math.floor(Math.random()*pixels.length)]]);
+
+  for (let pass=0;pass<5;pass++) {
+    const grp = Array.from({length:max},()=>[]);
+
+    for (let p of pixels) {
+      let best=0, bestD=Infinity;
+      for (let c=0;c<max;c++){
+        const d=dist(p,cent[c]);
+        if(d<bestD){bestD=d;best=c;}
+      }
+      grp[best].push(p);
     }
-  </script>
+
+    for (let c=0;c<max;c++){
+      if(grp[c].length===0) continue;
+      let r=0,g=0,b=0;
+      for(let p of grp[c]){r+=p[0];g+=p[1];b+=p[2];}
+      cent[c]=[
+        Math.round(r/grp[c].length),
+        Math.round(g/grp[c].length),
+        Math.round(b/grp[c].length)
+      ];
+    }
+  }
+
+  return cent;
+}
+
+function generateLevel(palette) {
+  const d = ctx.getImageData(0, 0, SIZE, SIZE).data;
+  const grid = [];
+  let i = 0;
+
+  for (let y=0;y<SIZE;y++){
+    const row=[];
+    for(let x=0;x<SIZE;x++){
+      const r=d[i], g=d[i+1], b=d[i+2];
+      i+=4;
+
+      let best=0, bestD=Infinity;
+      for(let c=0;c<palette.length;c++){
+        const D=dist([r,g,b],palette[c]);
+        if(D<bestD){bestD=D;best=c;}
+      }
+      row.push(best+1);
+    }
+    grid.push(row);
+  }
+
+  return grid;
+}
+
+function rgb(rgbArr) {
+  return `rgb(${rgbArr[0]},${rgbArr[1]},${rgbArr[2]})`;
+}
+
+
+// =======================================================================
+// PIPELINE COMPLET
+// =======================================================================
+function processImage() {
+  const pixels  = getPixels();
+  const palette = reduceColors(pixels, MAX_COLORS);
+  const level   = generateLevel(palette);
+
+  CURRENT_PALETTE = palette;
+  CURRENT_LEVEL   = level;
+
+  initCount(level);
+  buildPaletteUI(palette);
+  buildGrid(level);
+  resetReveal();
+
+  updateProgress();
+  updateColorCounts();
+}
+
+
+// =======================================================================
+// COUNTERS
+// =======================================================================
+function initCount(level) {
+  countsByColor   = {};
+  revealedByColor = {};
+
+  for(let i=1;i<=CURRENT_PALETTE.length;i++){
+    countsByColor[i]=0;
+    revealedByColor[i]=0;
+  }
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      countsByColor[ CURRENT_LEVEL[r][c] ]++;
+    }
+  }
+
+  totalRevealed=0;
+}
+
+function updateProgress() {
+  const pct = (totalRevealed / totalCells *100).toFixed(1);
+  progressInner.style.width = pct+"%";
+  progressText.textContent  = `Progression : ${pct}%`;
+}
+
+function updateColorCounts() {
+  colorCounts.innerHTML = "";
+  const N = CURRENT_PALETTE.length;
+
+  for(let i=1;i<=N;i++){
+    const total  = countsByColor[i];
+    const done   = revealedByColor[i];
+    const remain = total-done;
+
+    const row = document.createElement("div");
+    row.className="color-counts-row";
+
+    const sw = document.createElement("div");
+    sw.className="color-count-swatch";
+    sw.style.background = rgb(CURRENT_PALETTE[i-1]);
+
+    const label = document.createElement("span");
+    label.textContent = `#${i} : reste ${remain}`;
+
+    row.appendChild(sw);
+    row.appendChild(label);
+    colorCounts.appendChild(row);
+  }
+}
+
+
+// =======================================================================
+// PALETTE UI
+// =======================================================================
+function buildPaletteUI(palette) {
+  paletteDisplay.innerHTML="";
+  paletteBtns.innerHTML="";
+  ACTIVE_INDEX=null;
+  activeLabel.textContent="aucune";
+
+  // swatches
+  palette.forEach(rgbArr=>{
+    const sw=document.createElement("div");
+    sw.className="palette-swatch";
+    sw.style.background=rgb(rgbArr);
+    paletteDisplay.appendChild(sw);
+  });
+
+  // boutons
+  palette.forEach((rgbArr, idx)=>{
+    const n=idx+1;
+
+    const btn=document.createElement("button");
+    btn.dataset.index=n;
+
+    const dot=document.createElement("span");
+    dot.className="dot";
+    dot.style.background=rgb(rgbArr);
+
+    const txt=document.createElement("span");
+    txt.textContent=`#${n}`;
+
+    btn.appendChild(dot);
+    btn.appendChild(txt);
+
+    btn.addEventListener("click", ()=> selectColor(n));
+    paletteBtns.appendChild(btn);
+  });
+}
+
+function selectColor(n) {
+  ACTIVE_INDEX=n;
+  activeLabel.textContent=n;
+
+  const btns=paletteBtns.querySelectorAll("button");
+  btns.forEach(b=>{
+    if(parseInt(b.dataset.index)===n) b.classList.add("selected");
+    else b.classList.remove("selected");
+  });
+}
+
+
+// =======================================================================
+// GRILLE & RÉVÉLATION
+// =======================================================================
+function buildGrid(level) {
+  gridDiv.innerHTML="";
+  CELLS=[];
+  REVEALED=[];
+
+  for(let r=0;r<SIZE;r++){
+    const rowCells=[];
+    const rowRev=[];
+    for(let c=0;c<SIZE;c++){
+      const d=document.createElement("div");
+      d.className="cell";
+      d.dataset.r=r;
+      d.dataset.c=c;
+      gridDiv.appendChild(d);
+      rowCells.push(d);
+      rowRev.push(false);
+    }
+    CELLS.push(rowCells);
+    REVEALED.push(rowRev);
+  }
+}
+
+function resetReveal() {
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      REVEALED[r][c]=false;
+      CELLS[r][c].style.background="#000";
+    }
+  }
+  for(let k in revealedByColor) revealedByColor[k]=0;
+  totalRevealed=0;
+}
+
+// Révéler un pixel si c'est la bonne couleur
+function revealOne(r,c) {
+  if(r<0||c<0||r>=SIZE||c>=SIZE) return;
+  if(ACTIVE_INDEX==null) return;
+  if(REVEALED[r][c]) return;
+  if(CURRENT_LEVEL[r][c]!==ACTIVE_INDEX) return;
+
+  REVEALED[r][c]=true;
+  CELLS[r][c].style.background = rgb(CURRENT_PALETTE[ACTIVE_INDEX-1]);
+
+  revealedByColor[ACTIVE_INDEX]++;
+  totalRevealed++;
+}
+
+// Pinceau : gros carré autour du point (rayon 4 → 9x9)
+function revealBrush(r,c) {
+  for(let dy=-BRUSH_RAD;dy<=BRUSH_RAD;dy++){
+    for(let dx=-BRUSH_RAD;dx<=BRUSH_RAD;dx++){
+      revealOne(r+dy, c+dx);
+    }
+  }
+  updateProgress();
+  updateColorCounts();
+}
+
+
+// =======================================================================
+// GRATTAGE MODE TOGGLE (souris + mobile)
+// =======================================================================
+gridDiv.style.userSelect = "none"; // éviter sélection texte
+
+// --- SOURIS ---
+gridDiv.addEventListener("mousedown", (e) => {
+  // toggle ON / OFF
+  dragging = !dragging;
+  if (dragging) handlePointer(e.clientX, e.clientY);
+});
+
+gridDiv.addEventListener("mousemove", (e) => {
+  if (dragging) handlePointer(e.clientX, e.clientY);
+});
+
+// --- TOUCH (mobile) ---
+gridDiv.addEventListener("touchstart", (e) => {
+  dragging = !dragging;
+  const t = e.touches[0];
+  if (dragging) handlePointer(t.clientX, t.clientY);
+  e.preventDefault();
+}, {passive:false});
+
+gridDiv.addEventListener("touchmove", (e) => {
+  if (!dragging) return;
+  const t=e.touches[0];
+  handlePointer(t.clientX,t.clientY);
+  e.preventDefault();
+}, {passive:false});
+
+function handlePointer(x, y) {
+  const elem = document.elementFromPoint(x, y);
+  if (!elem || !elem.classList.contains("cell")) return;
+  const r = parseInt(elem.dataset.r);
+  const c = parseInt(elem.dataset.c);
+  revealBrush(r, c);
+}
+</script>
+
 </body>
 </html>
+
