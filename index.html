@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scratch by Number – Level Builder</title>
+
+<style>
+html, body {
+    overscroll-behavior: none;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+}
+
+/* ---------------- TITRES / PANELS --------------- */
+h2 {
+    margin: 0;
+    padding: 20px;
+}
+
+#container {
+    display: flex;
+    gap: 20px;
+    padding: 0 20px 20px;
+}
+
+.panel {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.bigpanel {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.sectionTitle {
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+/* -------------- PREVIEW IMAGES ----------------- */
+.previewBox {
+    width: 260px;
+    height: 260px;
+    border: 2px solid #aaa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: #ddd;
+    margin-bottom: 10px;
+}
+
+.previewBox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* -------------- SCRATCH CANVAS ------------------ */
+#pixelCanvas {
+    border: 2px solid #333;
+    background: black;
+    touch-action: none;
+}
+
+/* -------------- PALETTE ------------------------- */
+.paletteContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.paletteColor {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    box-shadow: inset 0 0 3px rgba(0,0,0,0.4);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border 0.15s;
+}
+
+.paletteColor.active {
+    transform: scale(1.10);
+    border: 2px solid cyan;
+    box-shadow: 0 0 8px cyan;
+}
+
+/* -------------- GENERAL UI ---------------------- */
+button {
+    padding: 8px 12px;
+    margin-top: 4px;
+    cursor: pointer;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    padding: 6px 8px;
+}
+
+.sliderRow {
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>Scratch by Number – Level Builder</h2>
+
+<div id="container">
+
+    <!-- LEFT PANEL -->
+    <div class="panel">
+        <div class="sectionTitle">1. Paramètres & génération</div>
+
+        Nom du niveau :
+        <input id="levelName" type="text" placeholder="ex : cat_01">
+
+        Image source :
+        <input id="imgInput" type="file" accept="image/png,image/jpeg">
+
+        Taille grille :
+        <select id="gridSize">
+            <option>50 x 50</option>
+            <option>100 x 100</option>
+            <option selected>200 x 200</option>
+        </select>
+
+        Couleurs max :
+        <input id="maxColors" type="number" min="5" max="32" value="20">
+
+        <button onclick="generateGrid()">Générer</button>
+
+        <br><br>
+        Grille générée :
+        <span id="gridInfo">-</span>
+
+        <div class="sectionTitle" style="margin-top:20px;">2. Aperçus</div>
+
+        Original :
+        <div class="previewBox"><img id="previewOriginal"></div>
+
+        Pixelisé :
+        <div class="previewBox"><img id="previewPixel"></div>
+
+        Palette :
+        <div id="palettePreview" class="paletteContainer"></div>
+
+        <br>
+        <button onclick="exportHidden()">hidden.png</button>
+        <button onclick="exportMask()">mask.png</button>
+        <button onclick="exportIndex()">indexMap.png</button>
+        <button onclick="exportPalette()">palette.json</button>
+        <button onclick="exportMeta()">meta.json</button>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="bigpanel">
+
+        <div class="sectionTitle">3. Test Scratch (Mobile OK)</div>
+
+        Couleur active :
+        <span id="activeColorText">aucune</span>
+        <br>
+
+        Pixels restants : <span id="remainingColor">0</span>
+        <br><br>
+
+        <!-- SLIDER PINCEAU PREMIUM -->
+        <div class="sliderRow">
+            Taille du pinceau : <span id="brushLabel">3</span><br>
+            <input type="range" id="brushSlider" min="1" max="15" value="3" style="width:200px;">
+        </div>
+
+        <!-- PROGRESS GLOBAL -->
+        <div>
+            Progression globale :
+            <span id="progressPercent">0%</span>
+        </div>
+
+        <div style="height:10px; width:300px; background:#ddd; border-radius:5px; margin:6px 0;">
+            <div id="progressBar" style="height:100%; width:0%; background:#6cc;"></div>
+        </div>
+
+        <!-- PALETTE -->
+        <div id="paletteButtons" class="paletteContainer"></div>
+
+        <!-- SCRATCH CANVAS -->
+        <canvas id="pixelCanvas" width="400" height="400" style="margin-top:10px;"></canvas>
+
+    </div>
+
+</div>
+
+<script>
+/* -------------------------------------------------
+   VARIABLES
+--------------------------------------------------*/
+let originalImg = null;
+let resizedCanvas = document.createElement("canvas");
+let resizedCtx = resizedCanvas.getContext("2d");
+
+let pixelCanvas = document.getElementById("pixelCanvas");
+let px = pixelCanvas.getContext("2d");
+
+let LEVEL = [];
+let COLOR_PALETTE = [];
+let active = null;
+
+let colorRemaining = [];
+let revealed = 0;
+let totalCells = 0;
+
+let scratchSize = 3; // MODIFIÉ PAR LE SLIDER
+let touchingCanvas = false;
+
+const cellPx = 400;
+
+/* -------------------------------------------------
+   BRUSH SLIDER
+--------------------------------------------------*/
+let brushSlider = document.getElementById("brushSlider");
+brushSlider.addEventListener("input", ()=>{
+    scratchSize = parseInt(brushSlider.value);
+    document.getElementById("brushLabel").textContent = scratchSize;
+});
+
+/* -------------------------------------------------
+   LOAD IMAGE
+--------------------------------------------------*/
+document.getElementById("imgInput").addEventListener("change", e=>{
+    let file = e.target.files[0];
+    if (!file) return;
+
+    let img = new Image();
+    img.onload = ()=>{
+        originalImg = img;
+        document.getElementById("previewOriginal").src = img.src;
+    };
+    img.src = URL.createObjectURL(file);
+});
+
+/* -------------------------------------------------
+   GENERATE GRID
+--------------------------------------------------*/
+function generateGrid() {
+    if (!originalImg) {
+        alert("Choisis une image !");
+        return;
+    }
+
+    let size = parseInt(document.getElementById("gridSize").value);
+    let maxC = Math.max(5, Math.min(32, parseInt(document.getElementById("maxColors").value)));
+
+    // Resize
+    resizedCanvas.width = size;
+    resizedCanvas.height = size;
+
+    let ratio = Math.min(size / originalImg.width, size / originalImg.height);
+    let w = originalImg.width * ratio;
+    let h = originalImg.height * ratio;
+    let x = (size - w)/2;
+    let y = (size - h)/2;
+
+    resizedCtx.clearRect(0,0,size,size);
+    resizedCtx.imageSmoothingEnabled = false;
+    resizedCtx.drawImage(originalImg, x, y, w, h);
+
+    document.getElementById("previewPixel").src = resizedCanvas.toDataURL();
+
+    // Quantize
+    let imgData = resizedCtx.getImageData(0,0,size,size);
+    let data = imgData.data;
+
+    COLOR_PALETTE = quantize(data, maxC);
+
+    LEVEL = [];
+    revealed = 0;
+    totalCells = size * size;
+
+    colorRemaining = new Array(COLOR_PALETTE.length).fill(0);
+
+    for (let y=0; y<size; y++) {
+        let row=[];
+        for (let x=0; x<size; x++){
+            let idx=(y*size+x)*4;
+            let r=data[idx], g=data[idx+1], b=data[idx+2];
+            let cIndex = nearest(r,g,b);
+            row.push(cIndex);
+            colorRemaining[cIndex]++;
+        }
+        LEVEL.push(row);
+    }
+
+    document.getElementById("gridInfo").textContent =
+        size+"×"+size+", "+COLOR_PALETTE.length+" couleurs";
+
+    buildPaletteUI();
+    drawMask();
+    updateGlobalProgress();
+    updateColorRemaining();
+}
+
+/* -------------------------------------------------
+   QUANTIZATION
+--------------------------------------------------*/
+function quantize(data, count){
+    let list=[];
+    for(let i=0;i<data.length;i+=4)
+        list.push([data[i],data[i+1],data[i+2]]);
+
+    let centroids=[];
+    for(let i=0;i<count;i++)
+        centroids.push(list[Math.floor(Math.random()*list.length)]);
+
+    for(let it=0;it<3;it++){
+        let groups = Array.from({length:count},()=>[]);
+        for(let c of list){
+            let best=0,bestD=1e12;
+            for(let i=0;i<count;i++){
+                let d = dist(c,centroids[i]);
+                if(d<bestD){bestD=d; best=i;}
+            }
+            groups[best].push(c);
+        }
+        for(let i=0;i<count;i++){
+            if(groups[i].length){
+                let r=0,g=0,b=0;
+                for(let c of groups[i]){r+=c[0];g+=c[1];b+=c[2];}
+                r/=groups[i].length; g/=groups[i].length; b/=groups[i].length;
+                centroids[i]=[r,g,b];
+            }
+        }
+    }
+
+    return centroids.map(c=>({
+        r:Math.round(c[0]),
+        g:Math.round(c[1]),
+        b:Math.round(c[2])
+    }));
+}
+
+function dist(a,b){
+    return (a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2;
+}
+
+function nearest(r,g,b){
+    let best=0,bestD=1e12;
+    for(let i=0;i<COLOR_PALETTE.length;i++){
+        let c=COLOR_PALETTE[i];
+        let d = dist([r,g,b],[c.r,c.g,c.b]);
+        if(d<bestD){bestD=d;best=i;}
+    }
+    return best;
+}
+
+/* -------------------------------------------------
+   PALETTE UI (PREMIUM)
+--------------------------------------------------*/
+function buildPaletteUI(){
+    let container = document.getElementById("paletteButtons");
+    let preview = document.getElementById("palettePreview");
+
+    container.innerHTML="";
+    preview.innerHTML="";
+
+    COLOR_PALETTE.forEach((c,i)=>{
+        // preview
+        let p=document.createElement("div");
+        p.className="paletteColor";
+        p.style.background=`rgb(${c.r},${c.g},${c.b})`;
+        preview.appendChild(p);
+
+        // clickable palette
+        let div=document.createElement("div");
+        div.className="paletteColor";
+        div.style.background=`rgb(${c.r},${c.g},${c.b})`;
+
+        div.onclick=()=>{
+            document.querySelectorAll("#paletteButtons .paletteColor")
+                .forEach(x=>x.classList.remove("active"));
+
+            div.classList.add("active");
+            active=i;
+            document.getElementById("activeColorText").textContent="Couleur "+(i+1);
+            updateColorRemaining();
+        };
+
+        container.appendChild(div);
+    });
+}
+
+/* -------------------------------------------------
+   DRAW MASK
+--------------------------------------------------*/
+function drawMask(){
+    px.fillStyle="black";
+    px.fillRect(0,0,400,400);
+}
+
+/* -------------------------------------------------
+   SCRATCH — SOURIS
+--------------------------------------------------*/
+pixelCanvas.addEventListener("mousemove", e=>{
+    if(active===null) return;
+    scratchEvent(e.clientX, e.clientY);
+});
+
+/* -------------------------------------------------
+   SCRATCH — MOBILE
+--------------------------------------------------*/
+pixelCanvas.addEventListener("touchstart", e=>{
+    touchingCanvas=true;
+    e.preventDefault();
+    scratchTouch(e);
+},{passive:false});
+
+pixelCanvas.addEventListener("touchmove", e=>{
+    if(!touchingCanvas) return;
+    e.preventDefault();
+    scratchTouch(e);
+},{passive:false});
+
+pixelCanvas.addEventListener("touchend", ()=>touchingCanvas=false);
+pixelCanvas.addEventListener("touchcancel", ()=>touchingCanvas=false);
+
+document.addEventListener("touchmove", e=>{
+    if(touchingCanvas) e.preventDefault();
+},{passive:false});
+
+function scratchTouch(e){
+    let t=e.touches[0];
+    scratchEvent(t.clientX, t.clientY);
+}
+
+/* -------------------------------------------------
+   SCRATCH LOGIC
+--------------------------------------------------*/
+function scratchEvent(clientX, clientY){
+    let rect=pixelCanvas.getBoundingClientRect();
+    let x=clientX-rect.left;
+    let y=clientY-rect.top;
+
+    let s=LEVEL.length;
+    let gx = Math.floor(x / (400/s));
+    let gy = Math.floor(y / (400/s));
+
+    scratchAt(gx,gy);
+}
+
+function scratchAt(cx,cy){
+    if(active===null) return;
+
+    let s=LEVEL.length;
+
+    for(let dy=-scratchSize; dy<=scratchSize; dy++){
+        for(let dx=-scratchSize; dx<=scratchSize; dx++){
+
+            let X=cx+dx, Y=cy+dy;
+            if(X<0||Y<0||X>=s||Y>=s) continue;
+
+            if(LEVEL[Y][X]===-1) continue;
+            if(LEVEL[Y][X]!==active) continue;
+
+            LEVEL[Y][X]=-1;
+            revealed++;
+            colorRemaining[active]--;
+
+            let w=400/s;
+            px.fillStyle=`rgb(${COLOR_PALETTE[active].r},${COLOR_PALETTE[active].g},${COLOR_PALETTE[active].b})`;
+            px.fillRect(X*w, Y*w, w, w);
+
+            updateColorRemaining();
+            updateGlobalProgress();
+        }
+    }
+}
+
+function updateColorRemaining(){
+    if(active===null) {
+        document.getElementById("remainingColor").textContent="0";
+        return;
+    }
+    document.getElementById("remainingColor").textContent=colorRemaining[active];
+}
+
+function updateGlobalProgress(){
+    let p = Math.floor((revealed/totalCells)*100);
+    document.getElementById("progressPercent").textContent=p+"%";
+    document.getElementById("progressBar").style.width=p+"%";
+}
+
+/* -------------------------------------------------
+   EXPORTS
+--------------------------------------------------*/
+function exportHidden(){
+    download(resizedCanvas.toDataURL(),"hidden.png");
+}
+
+function exportMask(){
+    let s=LEVEL.length;
+    let c=document.createElement("canvas");
+    c.width=s; c.height=s;
+    let x=c.getContext("2d");
+    x.fillStyle="black";
+    x.fillRect(0,0,s,s);
+    download(c.toDataURL(),"mask.png");
+}
+
+function exportIndex(){
+    let s=LEVEL.length;
+    let c=document.createElement("canvas");
+    c.width=s; c.height=s;
+    let x=c.getContext("2d");
+    let img=x.getImageData(0,0,s,s);
+
+    for(let y=0;y<s;y++){
+        for(let xx=0;xx<s;xx++){
+            let id=(y*s+xx)*4;
+            let col=LEVEL[y][xx];
+            if(col<0) col=0;
+            img.data[id]=col;
+            img.data[id+1]=col;
+            img.data[id+2]=col;
+            img.data[id+3]=255;
+        }
+    }
+
+    x.putImageData(img,0,0);
+    download(c.toDataURL(),"indexMap.png");
+}
+
+function exportPalette(){
+    downloadJSON(COLOR_PALETTE,"palette.json");
+}
+
+function exportMeta(){
+    let meta={
+        name:document.getElementById("levelName").value||"level",
+        size:LEVEL.length,
+        colors:COLOR_PALETTE.length
+    };
+    downloadJSON(meta,"meta.json");
+}
+
+function download(dataURL,name){
+    let a=document.createElement("a");
+    a.href=dataURL;
+    a.download=name;
+    a.click();
+}
+
+function downloadJSON(obj,name){
+    let a=document.createElement("a");
+    a.href="data:application/json,"+encodeURIComponent(JSON.stringify(obj,null,2));
+    a.download=name;
+    a.click();
+}
+
+</script>
+</body>
+</html>
