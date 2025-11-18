@@ -12,10 +12,16 @@ body {
     padding: 0;
 }
 
+h2 {
+    margin: 0;
+    padding: 20px;
+}
+
 #container {
     display: flex;
     gap: 20px;
-    padding: 20px;
+    padding: 0 20px 20px;
+    box-sizing: border-box;
 }
 
 .panel {
@@ -32,6 +38,7 @@ body {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    box-sizing: border-box;
 }
 
 .sectionTitle {
@@ -61,6 +68,7 @@ body {
 #pixelCanvas {
     border: 2px solid #333;
     background: black;
+    touch-action: none; /* empêche le scroll sur mobile pendant le grattage */
 }
 
 .paletteColor {
@@ -77,12 +85,26 @@ button {
     margin-top: 4px;
     cursor: pointer;
 }
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    padding: 6px 8px;
+}
+
+#paletteButtons button {
+    margin-right: 4px;
+    margin-bottom: 4px;
+}
 </style>
 </head>
 
 <body>
 
-<h2 style="padding:20px; margin:0;">Scratch by Number – Level Builder</h2>
+<h2>Scratch by Number – Level Builder</h2>
 
 <div id="container">
 
@@ -92,20 +114,20 @@ button {
         <div class="sectionTitle">1. Paramètres & génération</div>
 
         Nom du niveau (id) :  
-        <input id="levelName" type="text" placeholder="ex : cat_01" style="width:100%; margin-bottom:10px;">
+        <input id="levelName" type="text" placeholder="ex : cat_01">
 
         Image source :  
-        <input id="imgInput" type="file" accept="image/png,image/jpeg" style="width:100%; margin-bottom:10px;">
+        <input id="imgInput" type="file" accept="image/png,image/jpeg">
 
         Taille grille :  
-        <select id="gridSize" style="width:100%; margin-bottom:10px;">
+        <select id="gridSize">
             <option>50 x 50</option>
             <option>100 x 100</option>
             <option selected>200 x 200</option>
         </select>
 
         Couleurs max (5-32) :  
-        <input id="maxColors" type="number" min="5" max="32" value="20" style="width:100%; margin-bottom:10px;">
+        <input id="maxColors" type="number" min="5" max="32" value="20">
 
         <button onclick="generateGrid()">Générer la grille & la palette</button>
 
@@ -155,7 +177,6 @@ button {
 </div>
 
 <script>
-
 let originalImg = null;
 let resizedCanvas = document.createElement("canvas");
 let resizedCtx = resizedCanvas.getContext("2d");
@@ -163,18 +184,21 @@ let resizedCtx = resizedCanvas.getContext("2d");
 let pixelCanvas = document.getElementById("pixelCanvas");
 let px = pixelCanvas.getContext("2d");
 
-let LEVEL = [];
-let COLOR_PALETTE = [];
-let active = null;
+let LEVEL = [];           // grille d’index couleurs (0..N-1)
+let COLOR_PALETTE = [];   // liste {r,g,b}
+let active = null;        // index couleur active
 
 let revealed = 0;
 let totalCells = 0;
+
+const cellPx = 400; // taille du canvas scratch
 
 /*---------------------------------------------------
     LOAD IMAGE
 ----------------------------------------------------*/
 document.getElementById("imgInput").addEventListener("change", (e)=>{
     let file = e.target.files[0];
+    if (!file) return;
     let img = new Image();
     img.onload = ()=>{
         originalImg = img;
@@ -193,14 +217,14 @@ function generateGrid() {
         return;
     }
 
-    let size = parseInt(document.getElementById("gridSize").value);
+    let size = parseInt(document.getElementById("gridSize").value); // "200 x 200" -> 200
     let maxC = parseInt(document.getElementById("maxColors").value);
+    maxC = Math.max(5, Math.min(32, maxC || 20));
 
     // resize image to square (ratio respected inside)
     resizedCanvas.width = size;
     resizedCanvas.height = size;
-    resizedCtx.fillStyle="white";
-    resizedCtx.fillRect(0,0,size,size);
+    resizedCtx.clearRect(0,0,size,size);
 
     let ratio = Math.min(size/originalImg.width, size/originalImg.height);
     let w = originalImg.width * ratio;
@@ -208,16 +232,16 @@ function generateGrid() {
     let x = (size - w)/2;
     let y = (size - h)/2;
 
+    resizedCtx.imageSmoothingEnabled = false;
     resizedCtx.drawImage(originalImg, x, y, w, h);
 
-    // pixel preview
+    // pixel preview (dans le cadre)
     document.getElementById("previewPixel").src = resizedCanvas.toDataURL();
 
     // quantize colors
     let imgData = resizedCtx.getImageData(0,0,size,size);
     let data = imgData.data;
 
-    // simple k-means approximation
     COLOR_PALETTE = quantizeColors(data, maxC);
 
     // rebuild LEVEL
@@ -225,16 +249,16 @@ function generateGrid() {
     revealed = 0;
     totalCells = size * size;
     document.getElementById("totalCount").textContent = totalCells;
+    document.getElementById("revealedCount").textContent = 0;
+    document.getElementById("progressBar").style.width = "0%";
 
     for (let y = 0; y < size; y++) {
         let row = [];
         for (let x = 0; x < size; x++) {
-
             let idx = (y*size + x)*4;
             let r=data[idx], g=data[idx+1], b=data[idx+2];
-
             let best = nearestColor(r,g,b);
-            row.push(best);
+            row.push(best); // index de palette
         }
         LEVEL.push(row);
     }
@@ -242,12 +266,10 @@ function generateGrid() {
     document.getElementById("gridInfo").textContent = size+"×"+size+", "+COLOR_PALETTE.length+" couleurs";
     buildPaletteUI();
     drawMask();
-    document.getElementById("revealedCount").textContent = 0;
-
 }
 
 /*---------------------------------------------------
-    QUANTIZATION (simple)
+    QUANTIZATION (simple k-means light)
 ----------------------------------------------------*/
 function quantizeColors(data, count){
     let colors = [];
@@ -337,41 +359,77 @@ function buildPaletteUI(){
 }
 
 /*---------------------------------------------------
-    DRAW MASK
+    DRAW MASK (canvas noir)
 ----------------------------------------------------*/
 function drawMask(){
     px.fillStyle="black";
-    px.fillRect(0,0,400,400);
+    px.fillRect(0,0,cellPx,cellPx);
 }
 
 /*---------------------------------------------------
-    SCRATCH TEST
+    SCRATCH / GRATTAGE
 ----------------------------------------------------*/
 
-let size = 200; // dynamic, updated later
-const cellPx = 400; // canvas size
-let scratchSize = 3;
+let scratchSize = 3; // rayon en "cases"
 
-pixelCanvas.onmousemove = function(e){
+pixelCanvas.addEventListener("mousemove", function(e){
     if(active===null) return;
+    if(!LEVEL.length) return;
 
     let rect = pixelCanvas.getBoundingClientRect();
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
 
-    let gridX = Math.floor(x / (cellPx/LEVEL.length));
-    let gridY = Math.floor(y / (cellPx/LEVEL.length));
+    let s = LEVEL.length;
+    let gridX = Math.floor(x / (cellPx/s));
+    let gridY = Math.floor(y / (cellPx/s));
 
     revealAt(gridX,gridY);
-};
+});
 
+/* --- TACTILE MOBILE --- */
+pixelCanvas.addEventListener("touchstart", function(e){
+    e.preventDefault();
+    handleTouch(e);
+}, {passive:false});
+
+pixelCanvas.addEventListener("touchmove", function(e){
+    e.preventDefault();
+    handleTouch(e);
+}, {passive:false});
+
+pixelCanvas.addEventListener("touchend", function(e){
+    // rien de spécial
+});
+
+function handleTouch(e){
+    if(active===null) return;
+    if(!LEVEL.length) return;
+
+    const rect = pixelCanvas.getBoundingClientRect();
+    const t = e.touches[0];
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
+
+    let s = LEVEL.length;
+    let gridX = Math.floor(x / (cellPx/s));
+    let gridY = Math.floor(y / (cellPx/s));
+
+    revealAt(gridX, gridY);
+}
+
+/* --- LOGIQUE DE RÉVÉLATION --- */
 function revealAt(cx,cy){
+    if(!LEVEL.length) return;
     let s = LEVEL.length;
 
     for(let dy=-scratchSize; dy<=scratchSize; dy++){
         for(let dx=-scratchSize; dx<=scratchSize; dx++){
             let x=cx+dx, y=cy+dy;
             if(x<0||y<0||x>=s||y>=s) continue;
+
+            // si déjà révélé on ignore (valeur -1)
+            if(LEVEL[y][x]===-1) continue;
 
             if(LEVEL[y][x]===active){
                 LEVEL[y][x]=-1;
@@ -394,31 +452,39 @@ function updateProgress(){
 }
 
 /*---------------------------------------------------
-    EXPORTS (images & json)
+    EXPORTS
 ----------------------------------------------------*/
 function exportHidden(){
+    if(!resizedCanvas.width) { alert("Rien à exporter."); return; }
     download(resizedCanvas.toDataURL(),"hidden.png");
 }
+
 function exportMask(){
+    if(!LEVEL.length) { alert("Rien à exporter."); return; }
     let c=document.createElement("canvas");
-    c.width=resizedCanvas.width;
-    c.height=resizedCanvas.height;
+    c.width=LEVEL.length;
+    c.height=LEVEL.length;
     let x=c.getContext("2d");
     x.fillStyle="black";
     x.fillRect(0,0,c.width,c.height);
     download(c.toDataURL(),"mask.png");
 }
+
 function exportIndex(){
+    if(!LEVEL.length) { alert("Rien à exporter."); return; }
+
+    let size = LEVEL.length;
     let c=document.createElement("canvas");
-    c.width=LEVEL.length;
-    c.height=LEVEL.length;
+    c.width=size;
+    c.height=size;
     let x=c.getContext("2d");
 
-    let img=x.getImageData(0,0,c.width,c.height);
-    for(let y=0;y<c.height;y++){
-        for(let xx=0;xx<c.width;xx++){
-            let id=(y*c.width+xx)*4;
+    let img=x.getImageData(0,0,size,size);
+    for(let y=0;y<size;y++){
+        for(let xx=0;xx<size;xx++){
+            let id=(y*size+xx)*4;
             let col=LEVEL[y][xx];
+            if(col<0) col = 0; // au cas où on grattait avant d'exporter
             img.data[id]=col;
             img.data[id+1]=col;
             img.data[id+2]=col;
@@ -430,11 +496,14 @@ function exportIndex(){
 }
 
 function exportPalette(){
+    if(!COLOR_PALETTE.length) { alert("Rien à exporter."); return; }
     downloadJSON(COLOR_PALETTE,"palette.json");
 }
+
 function exportMeta(){
+    if(!LEVEL.length) { alert("Rien à exporter."); return; }
     let meta = {
-        name: document.getElementById("levelName").value,
+        name: document.getElementById("levelName").value || "level",
         size: LEVEL.length,
         colors: COLOR_PALETTE.length
     };
@@ -445,18 +514,20 @@ function download(dataURL,name){
     let a=document.createElement("a");
     a.href=dataURL;
     a.download=name;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 }
 
 function downloadJSON(obj,name){
     let a=document.createElement("a");
     a.href="data:application/json,"+encodeURIComponent(JSON.stringify(obj,null,2));
     a.download=name;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 }
-
 </script>
 
 </body>
 </html>
-
