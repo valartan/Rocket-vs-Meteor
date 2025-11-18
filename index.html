@@ -2,472 +2,461 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Scratch by Number – 200x200 (Natural Drag)</title>
+<title>Scratch by Number – Level Builder</title>
+
 <style>
-  body {
+body {
     font-family: Arial, sans-serif;
-    margin: 16px;
-    background: #111;
-    color: #f5f5f5;
-  }
+    background: #f2f2f2;
+    margin: 0;
+    padding: 0;
+}
 
-  h1 {
-    margin-bottom: 4px;
-  }
+#container {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+}
 
-  .section {
-    margin-top: 14px;
+.panel {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.bigpanel {
+    flex: 1;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+
+.sectionTitle {
+    font-weight: bold;
     margin-bottom: 10px;
-  }
+    font-size: 18px;
+}
 
-  #pixelCanvas {
-    image-rendering: pixelated;
-    width: 320px;
-    height: 320px;
-    border: 2px solid #333;
-    background: #222;
-    margin-top: 6px;
-    display: block;
-  }
-
-  #grid {
-    display: grid;
-    grid-template-columns: repeat(200, 3px);
-    grid-auto-rows: 3px;
-    gap: 1px;
-    margin-top: 10px;
-    touch-action: none;
-    background: #000;
-    padding: 4px;
-    border-radius: 8px;
-    max-width: calc(200 * 4px + 10px);
-  }
-
-  .cell {
-    width: 3px;
-    height: 3px;
-    background: #000;
-  }
-
-  .palette-swatch {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 1px solid #000;
-    margin-right: 4px;
-    margin-bottom: 4px;
-  }
-
-  .palette-buttons {
-    margin-top: 6px;
+.previewBox {
+    width: 260px;
+    height: 260px;
+    border: 2px solid #aaa;
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-
-  .palette-buttons button {
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid #444;
-    cursor: pointer;
-    font-size: 11px;
-    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: 4px;
-    background: #222;
-    color: #f5f5f5;
-  }
-
-  .palette-buttons button.selected {
-    outline: 2px solid #fff;
-    outline-offset: 1px;
-    box-shadow: 0 0 8px rgba(255,255,255,0.5);
-  }
-
-  .dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.6);
-  }
-
-  .color-counts-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 2px;
-    font-size: 12px;
-  }
-
-  .progress-bar-outer {
-    width: 280px;
-    height: 10px;
-    border-radius: 999px;
-    background: #333;
-    margin-top: 6px;
-    border: 1px solid #555;
     overflow: hidden;
-  }
+    background: #ddd;
+    margin-bottom: 10px;
+}
 
-  .progress-bar-inner {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #52ff9f, #28aadc);
-    transition: width 0.15s ease-out;
-  }
+.previewBox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
 
-  .progress-text {
-    font-size: 12px;
+#pixelCanvas {
+    border: 2px solid #333;
+    background: black;
+}
+
+.paletteColor {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    margin-right: 5px;
+    border-radius: 4px;
+    border: 1px solid #888;
+}
+
+button {
+    padding: 8px 12px;
     margin-top: 4px;
-  }
+    cursor: pointer;
+}
 </style>
 </head>
+
 <body>
 
-<h1>Scratch by Number – 200×200 (Natural Drag)</h1>
+<h2 style="padding:20px; margin:0;">Scratch by Number – Level Builder</h2>
 
-<div class="section">
-  <div>Choisir une image :</div>
-  <input type="file" id="fileInput" accept="image/png,image/jpeg">
+<div id="container">
+
+    <!-- LEFT PANEL ---------------------------- -->
+    <div class="panel">
+
+        <div class="sectionTitle">1. Paramètres & génération</div>
+
+        Nom du niveau (id) :  
+        <input id="levelName" type="text" placeholder="ex : cat_01" style="width:100%; margin-bottom:10px;">
+
+        Image source :  
+        <input id="imgInput" type="file" accept="image/png,image/jpeg" style="width:100%; margin-bottom:10px;">
+
+        Taille grille :  
+        <select id="gridSize" style="width:100%; margin-bottom:10px;">
+            <option>50 x 50</option>
+            <option>100 x 100</option>
+            <option selected>200 x 200</option>
+        </select>
+
+        Couleurs max (5-32) :  
+        <input id="maxColors" type="number" min="5" max="32" value="20" style="width:100%; margin-bottom:10px;">
+
+        <button onclick="generateGrid()">Générer la grille & la palette</button>
+
+        <br><br>
+        Grille générée : <span id="gridInfo">-</span>
+
+        <!-- PREVIEW -------------------------------- -->
+        <div class="sectionTitle" style="margin-top:20px;">2. Aperçu image</div>
+
+        Original (ratio respecté) :
+        <div class="previewBox"><img id="previewOriginal"></div>
+
+        Pixelisé / réduit :
+        <div class="previewBox"><img id="previewPixel"></div>
+
+        Palette générée :
+        <div id="palettePreview"></div>
+
+        <br>
+        <button onclick="exportHidden()">Exporter hidden.png</button>
+        <button onclick="exportMask()">Exporter mask.png</button>
+        <button onclick="exportIndex()">Exporter indexMap.png</button>
+        <button onclick="exportPalette()">Exporter palette.json</button>
+        <button onclick="exportMeta()">Exporter meta.json</button>
+
+    </div>
+
+    <!-- RIGHT PANEL -------------------------------------------- -->
+    <div class="bigpanel">
+
+        <div class="sectionTitle">3. Test de grattage (comme dans le jeu)</div>
+
+        Couleur active : <span id="activeColor">aucune</span>  
+        <br>
+        Révélé : <span id="revealedCount">0</span> / <span id="totalCount">0</span>
+        <div style="height:10px; width:300px; background:#ddd; border-radius:5px; margin:10px 0;">
+            <div id="progressBar" style="height:100%; width:0%; background:#6cc;"></div>
+        </div>
+
+        <div id="paletteButtons"></div>
+
+        <br><br>
+        <canvas id="pixelCanvas" width="400" height="400"></canvas>
+
+    </div>
+
 </div>
-
-<div class="section">
-  <h3>Aperçu pixelisé</h3>
-  <canvas id="pixelCanvas" width="200" height="200"></canvas>
-</div>
-
-<div class="section">
-  <h3>Palette réduite</h3>
-  <div id="paletteDisplay"></div>
-</div>
-
-<h3>Grattage</h3>
-Couleur active : <span id="activeColorLabel">aucune</span>
-
-<div class="palette-buttons" id="paletteButtons"></div>
-
-<div id="colorCounts"></div>
-
-<div class="progress-bar-outer">
-  <div class="progress-bar-inner" id="progressInner"></div>
-</div>
-<div class="progress-text" id="progressText">Progression : 0%</div>
-
-<div id="grid"></div>
 
 <script>
-// =======================================================================
-// CONFIGURATION
-// =======================================================================
-const SIZE = 200;
-const MAX_COLORS = 15;
-const BRUSH_RAD = 4; // 9x9 → très fluide
 
-let CURRENT_PALETTE = [];
-let CURRENT_LEVEL = [];
-let CELLS = [];
-let REVEALED = [];
-let ACTIVE_INDEX = null;
-let dragging = false;
-let totalRevealed = 0;
+let originalImg = null;
+let resizedCanvas = document.createElement("canvas");
+let resizedCtx = resizedCanvas.getContext("2d");
 
-let countsByColor = {};
-let revealedByColor = {};
+let pixelCanvas = document.getElementById("pixelCanvas");
+let px = pixelCanvas.getContext("2d");
 
-const totalCells = SIZE * SIZE;
+let LEVEL = [];
+let COLOR_PALETTE = [];
+let active = null;
 
-const fileInput = document.getElementById("fileInput");
-const canvas = document.getElementById("pixelCanvas");
-const ctx = canvas.getContext("2d");
-const paletteDisplay = document.getElementById("paletteDisplay");
-const paletteBtns = document.getElementById("paletteButtons");
-const activeLabel = document.getElementById("activeColorLabel");
-const colorCountsDiv = document.getElementById("colorCounts");
-const progressInner = document.getElementById("progressInner");
-const progressText = document.getElementById("progressText");
-const gridDiv = document.getElementById("grid");
+let revealed = 0;
+let totalCells = 0;
 
-
-// =======================================================================
-// IMPORT IMAGE
-// =======================================================================
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-
-  const img = new Image();
-  img.onload = () => {
-    ctx.drawImage(img, 0, 0, SIZE, SIZE);
-    processImage();
-  };
-  img.src = URL.createObjectURL(file);
+/*---------------------------------------------------
+    LOAD IMAGE
+----------------------------------------------------*/
+document.getElementById("imgInput").addEventListener("change", (e)=>{
+    let file = e.target.files[0];
+    let img = new Image();
+    img.onload = ()=>{
+        originalImg = img;
+        document.getElementById("previewOriginal").src = img.src;
+    };
+    img.src = URL.createObjectURL(file);
 });
 
+/*---------------------------------------------------
+    GENERATE GRID & PALETTE
+----------------------------------------------------*/
+function generateGrid() {
 
-// =======================================================================
-// UTILITAIRES
-// =======================================================================
-function dist(a,b) {
-  return Math.sqrt(
-    (a[0]-b[0])**2 +
-    (a[1]-b[1])**2 +
-    (a[2]-b[2])**2
-  );
-}
-
-function getPixels() {
-  const d = ctx.getImageData(0,0,SIZE,SIZE).data;
-  const out = [];
-  for (let i=0;i<d.length;i+=4)
-    out.push([d[i], d[i+1], d[i+2]]);
-  return out;
-}
-
-function reduceColors(pixels, max) {
-  const centers = [];
-  for (let i=0;i<max;i++)
-    centers.push([...pixels[Math.floor(Math.random()*pixels.length)]]);
-
-  for (let iter=0; iter<5; iter++) {
-    const groups = Array.from({length:max},()=>[]);
-    for (let p of pixels) {
-      let best=0, bestD=Infinity;
-      for (let c=0;c<max;c++) {
-        const d=dist(p,centers[c]);
-        if(d<bestD){bestD=d;best=c;}
-      }
-      groups[best].push(p);
+    if (!originalImg) {
+        alert("Choisis une image !");
+        return;
     }
-    for (let c=0;c<max;c++) {
-      if(groups[c].length===0) continue;
-      let r=0,g=0,b=0;
-      for(let p of groups[c]){r+=p[0];g+=p[1];b+=p[2];}
-      centers[c]=[
-        Math.round(r/groups[c].length),
-        Math.round(g/groups[c].length),
-        Math.round(b/groups[c].length)
-      ];
+
+    let size = parseInt(document.getElementById("gridSize").value);
+    let maxC = parseInt(document.getElementById("maxColors").value);
+
+    // resize image to square (ratio respected inside)
+    resizedCanvas.width = size;
+    resizedCanvas.height = size;
+    resizedCtx.fillStyle="white";
+    resizedCtx.fillRect(0,0,size,size);
+
+    let ratio = Math.min(size/originalImg.width, size/originalImg.height);
+    let w = originalImg.width * ratio;
+    let h = originalImg.height * ratio;
+    let x = (size - w)/2;
+    let y = (size - h)/2;
+
+    resizedCtx.drawImage(originalImg, x, y, w, h);
+
+    // pixel preview
+    document.getElementById("previewPixel").src = resizedCanvas.toDataURL();
+
+    // quantize colors
+    let imgData = resizedCtx.getImageData(0,0,size,size);
+    let data = imgData.data;
+
+    // simple k-means approximation
+    COLOR_PALETTE = quantizeColors(data, maxC);
+
+    // rebuild LEVEL
+    LEVEL = [];
+    revealed = 0;
+    totalCells = size * size;
+    document.getElementById("totalCount").textContent = totalCells;
+
+    for (let y = 0; y < size; y++) {
+        let row = [];
+        for (let x = 0; x < size; x++) {
+
+            let idx = (y*size + x)*4;
+            let r=data[idx], g=data[idx+1], b=data[idx+2];
+
+            let best = nearestColor(r,g,b);
+            row.push(best);
+        }
+        LEVEL.push(row);
     }
-  }
-  return centers;
+
+    document.getElementById("gridInfo").textContent = size+"×"+size+", "+COLOR_PALETTE.length+" couleurs";
+    buildPaletteUI();
+    drawMask();
+    document.getElementById("revealedCount").textContent = 0;
+
 }
 
-function generateLevel(palette) {
-  const d = ctx.getImageData(0,0,SIZE,SIZE).data;
-  let idx=0;
-  const grid=[];
-  for(let y=0;y<SIZE;y++){
-    const row=[];
-    for(let x=0;x<SIZE;x++){
-      const r=d[idx], g=d[idx+1], b=d[idx+2];
-      idx+=4;
-      let best=0, bestD=Infinity;
-      for(let i=0;i<palette.length;i++){
-        const dd=dist([r,g,b],palette[i]);
-        if(dd<bestD){bestD=dd;best=i;}
-      }
-      row.push(best+1);
+/*---------------------------------------------------
+    QUANTIZATION (simple)
+----------------------------------------------------*/
+function quantizeColors(data, count){
+    let colors = [];
+    for(let i=0;i<data.length;i+=4){
+        colors.push([data[i],data[i+1],data[i+2]]);
     }
-    grid.push(row);
-  }
-  return grid;
-}
 
-function rgb(a){ return `rgb(${a[0]},${a[1]},${a[2]})`; }
-
-
-// =======================================================================
-// PIPELINE IMAGE
-// =======================================================================
-function processImage() {
-  const pixels = getPixels();
-  const palette = reduceColors(pixels, MAX_COLORS);
-  const level = generateLevel(palette);
-
-  CURRENT_PALETTE = palette;
-  CURRENT_LEVEL = level;
-
-  initCounters();
-  buildPaletteUI();
-  buildGrid();
-
-  updateProgress();
-  updateColorCounts();
-}
-
-
-// =======================================================================
-// COUNTERS
-// =======================================================================
-function initCounters() {
-  countsByColor = {};
-  revealedByColor = {};
-
-  for(let i=1;i<=CURRENT_PALETTE.length;i++){
-    countsByColor[i]=0;
-    revealedByColor[i]=0;
-  }
-
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      countsByColor[ CURRENT_LEVEL[r][c] ]++;
+    // random init
+    let centroids = [];
+    for(let i=0;i<count;i++){
+        centroids.push(colors[Math.floor(Math.random()*colors.length)]);
     }
-  }
 
-  totalRevealed = 0;
+    // 3 iterations
+    for(let it=0;it<3;it++){
+        let groups = Array.from({length:count}, ()=>[]);
+
+        for(let c of colors){
+            let best=0, bestD=Infinity;
+            for(let i=0;i<count;i++){
+                let d = dist(c,centroids[i]);
+                if(d<bestD){bestD=d; best=i;}
+            }
+            groups[best].push(c);
+        }
+
+        for(let i=0;i<count;i++){
+            if(groups[i].length>0){
+                let r=0,g=0,b=0;
+                for(let c of groups[i]){
+                    r+=c[0]; g+=c[1]; b+=c[2];
+                }
+                r/=groups[i].length;
+                g/=groups[i].length;
+                b/=groups[i].length;
+                centroids[i]=[r,g,b];
+            }
+        }
+    }
+
+    return centroids.map(c=>({
+        r:Math.round(c[0]),
+        g:Math.round(c[1]),
+        b:Math.round(c[2])
+    }));
 }
 
-function updateProgress() {
-  const pct = (totalRevealed / totalCells * 100).toFixed(1);
-  progressInner.style.width = pct + "%";
-  progressText.textContent = "Progression : " + pct + "%";
+function dist(a,b){
+    return (a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2;
 }
 
-function updateColorCounts() {
-  colorCountsDiv.innerHTML = "";
-  for(let i=1;i<=CURRENT_PALETTE.length;i++){
-    const remain = countsByColor[i] - revealedByColor[i];
-    const row = document.createElement("div");
-    row.className = "color-counts-row";
-    row.innerHTML =
-      `<div class="color-count-swatch" style="width:14px;height:14px;
-        background:${rgb(CURRENT_PALETTE[i-1])}"></div>
-       #${i} : reste ${remain}`;
-    colorCountsDiv.appendChild(row);
-  }
+function nearestColor(r,g,b){
+    let best=0, bestD=Infinity;
+    for(let i=0;i<COLOR_PALETTE.length;i++){
+        let c = COLOR_PALETTE[i];
+        let d = dist([r,g,b], [c.r,c.g,c.b]);
+        if(d<bestD){bestD=d; best=i;}
+    }
+    return best;
 }
 
+/*---------------------------------------------------
+    PALETTE UI
+----------------------------------------------------*/
+function buildPaletteUI(){
+    let box = document.getElementById("paletteButtons");
+    let prev = document.getElementById("palettePreview");
+    box.innerHTML="";
+    prev.innerHTML="";
 
-// =======================================================================
-// PALETTE UI
-// =======================================================================
-function buildPaletteUI() {
-  paletteDisplay.innerHTML = "";
-  paletteBtns.innerHTML = "";
-  ACTIVE_INDEX = null;
-  activeLabel.textContent = "aucune";
+    COLOR_PALETTE.forEach((c,i)=>{
+        // palette preview
+        let div=document.createElement("div");
+        div.className="paletteColor";
+        div.style.background=`rgb(${c.r},${c.g},${c.b})`;
+        prev.appendChild(div);
 
-  CURRENT_PALETTE.forEach(col=>{
-    const sw = document.createElement("div");
-    sw.className="palette-swatch";
-    sw.style.background = rgb(col);
-    paletteDisplay.appendChild(sw);
-  });
-
-  CURRENT_PALETTE.forEach((col, idx)=>{
-    const i=idx+1;
-    const btn=document.createElement("button");
-    btn.dataset.index=i;
-    btn.innerHTML =
-      `<span class="dot" style="background:${rgb(col)}"></span>#${i}`;
-    btn.onclick=()=>selectColor(i);
-    paletteBtns.appendChild(btn);
-  });
-}
-
-function selectColor(i){
-  ACTIVE_INDEX = i;
-  activeLabel.textContent = i;
-
-  document.querySelectorAll(".palette-buttons button")
-    .forEach(btn=>{
-      btn.classList.toggle("selected",
-        parseInt(btn.dataset.index)===i);
+        // button
+        let btn=document.createElement("button");
+        btn.textContent="#"+(i+1);
+        btn.onclick=()=>{
+            active=i;
+            document.getElementById("activeColor").textContent = (i+1);
+        };
+        box.appendChild(btn);
     });
 }
 
+/*---------------------------------------------------
+    DRAW MASK
+----------------------------------------------------*/
+function drawMask(){
+    px.fillStyle="black";
+    px.fillRect(0,0,400,400);
+}
 
-// =======================================================================
-// GRILLE & GRATTAGE
-// =======================================================================
-function buildGrid() {
-  gridDiv.innerHTML = "";
-  CELLS=[];
-  REVEALED=[];
+/*---------------------------------------------------
+    SCRATCH TEST
+----------------------------------------------------*/
 
-  for(let r=0;r<SIZE;r++){
-    const rowCells=[];
-    const rowRev=[];
-    for(let c=0;c<SIZE;c++){
-      const d=document.createElement("div");
-      d.className="cell";
-      d.dataset.r=r;
-      d.dataset.c=c;
-      gridDiv.appendChild(d);
-      rowCells.push(d);
-      rowRev.push(false);
+let size = 200; // dynamic, updated later
+const cellPx = 400; // canvas size
+let scratchSize = 3;
+
+pixelCanvas.onmousemove = function(e){
+    if(active===null) return;
+
+    let rect = pixelCanvas.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+
+    let gridX = Math.floor(x / (cellPx/LEVEL.length));
+    let gridY = Math.floor(y / (cellPx/LEVEL.length));
+
+    revealAt(gridX,gridY);
+};
+
+function revealAt(cx,cy){
+    let s = LEVEL.length;
+
+    for(let dy=-scratchSize; dy<=scratchSize; dy++){
+        for(let dx=-scratchSize; dx<=scratchSize; dx++){
+            let x=cx+dx, y=cy+dy;
+            if(x<0||y<0||x>=s||y>=s) continue;
+
+            if(LEVEL[y][x]===active){
+                LEVEL[y][x]=-1;
+                revealed++;
+
+                px.fillStyle=`rgb(${COLOR_PALETTE[active].r},${COLOR_PALETTE[active].g},${COLOR_PALETTE[active].b})`;
+                let w = cellPx / s;
+                px.fillRect(x*w, y*w, w, w);
+
+                updateProgress();
+            }
+        }
     }
-    CELLS.push(rowCells);
-    REVEALED.push(rowRev);
-  }
 }
 
-function revealOne(r,c){
-  if(r<0||c<0||r>=SIZE||c>=SIZE) return;
-  if(REVEALED[r][c]) return;
-  if(ACTIVE_INDEX==null) return;
-  if(CURRENT_LEVEL[r][c]!==ACTIVE_INDEX) return;
-
-  REVEALED[r][c]=true;
-  CELLS[r][c].style.background = rgb(CURRENT_PALETTE[ACTIVE_INDEX-1]);
-  revealedByColor[ACTIVE_INDEX]++;
-  totalRevealed++;
+function updateProgress(){
+    document.getElementById("revealedCount").textContent = revealed;
+    let p = (revealed / totalCells)*100;
+    document.getElementById("progressBar").style.width = p+"%";
 }
 
-function revealBrush(r,c){
-  for(let dy=-BRUSH_RAD;dy<=BRUSH_RAD;dy++){
-    for(let dx=-BRUSH_RAD;dx<=BRUSH_RAD;dx++){
-      revealOne(r+dy, c+dx);
+/*---------------------------------------------------
+    EXPORTS (images & json)
+----------------------------------------------------*/
+function exportHidden(){
+    download(resizedCanvas.toDataURL(),"hidden.png");
+}
+function exportMask(){
+    let c=document.createElement("canvas");
+    c.width=resizedCanvas.width;
+    c.height=resizedCanvas.height;
+    let x=c.getContext("2d");
+    x.fillStyle="black";
+    x.fillRect(0,0,c.width,c.height);
+    download(c.toDataURL(),"mask.png");
+}
+function exportIndex(){
+    let c=document.createElement("canvas");
+    c.width=LEVEL.length;
+    c.height=LEVEL.length;
+    let x=c.getContext("2d");
+
+    let img=x.getImageData(0,0,c.width,c.height);
+    for(let y=0;y<c.height;y++){
+        for(let xx=0;xx<c.width;xx++){
+            let id=(y*c.width+xx)*4;
+            let col=LEVEL[y][xx];
+            img.data[id]=col;
+            img.data[id+1]=col;
+            img.data[id+2]=col;
+            img.data[id+3]=255;
+        }
     }
-  }
-  updateProgress();
-  updateColorCounts();
+    x.putImageData(img,0,0);
+    download(c.toDataURL(),"indexMap.png");
 }
 
+function exportPalette(){
+    downloadJSON(COLOR_PALETTE,"palette.json");
+}
+function exportMeta(){
+    let meta = {
+        name: document.getElementById("levelName").value,
+        size: LEVEL.length,
+        colors: COLOR_PALETTE.length
+    };
+    downloadJSON(meta,"meta.json");
+}
 
-// =======================================================================
-// GRATTAGE NATUREL (mousedown + move + mouseup)
-// =======================================================================
-gridDiv.style.userSelect="none";
+function download(dataURL,name){
+    let a=document.createElement("a");
+    a.href=dataURL;
+    a.download=name;
+    a.click();
+}
 
-// Souris
-gridDiv.addEventListener("mousedown", e=>{
-  dragging=true;
-  handlePointer(e.clientX,e.clientY);
-});
-document.addEventListener("mouseup", ()=> dragging=false);
-gridDiv.addEventListener("mousemove", e=>{
-  if(dragging) handlePointer(e.clientX,e.clientY);
-});
-
-// Mobile
-gridDiv.addEventListener("touchstart", e=>{
-  dragging=true;
-  const t=e.touches[0];
-  handlePointer(t.clientX,t.clientY);
-  e.preventDefault();
-},{passive:false});
-gridDiv.addEventListener("touchmove", e=>{
-  if(!dragging) return;
-  const t=e.touches[0];
-  handlePointer(t.clientX,t.clientY);
-  e.preventDefault();
-},{passive:false});
-document.addEventListener("touchend", ()=> dragging=false);
-
-
-// =======================================================================
-// POSITION → CELL
-// =======================================================================
-function handlePointer(x,y){
-  const elem=document.elementFromPoint(x,y);
-  if(!elem || !elem.classList.contains("cell")) return;
-  const r=parseInt(elem.dataset.r);
-  const c=parseInt(elem.dataset.c);
-  revealBrush(r,c);
+function downloadJSON(obj,name){
+    let a=document.createElement("a");
+    a.href="data:application/json,"+encodeURIComponent(JSON.stringify(obj,null,2));
+    a.download=name;
+    a.click();
 }
 
 </script>
+
 </body>
 </html>
+
