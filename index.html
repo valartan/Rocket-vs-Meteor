@@ -5,11 +5,12 @@
 <title>Scratch by Number – Level Builder</title>
 
 <style>
-body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
+html, body {
+    overscroll-behavior: none;
     margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
 }
 
 h2 {
@@ -21,7 +22,6 @@ h2 {
     display: flex;
     gap: 20px;
     padding: 0 20px 20px;
-    box-sizing: border-box;
 }
 
 .panel {
@@ -38,7 +38,6 @@ h2 {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    box-sizing: border-box;
 }
 
 .sectionTitle {
@@ -68,7 +67,7 @@ h2 {
 #pixelCanvas {
     border: 2px solid #333;
     background: black;
-    touch-action: none; /* empêche le scroll sur mobile pendant le grattage */
+    touch-action: none; /* empêche le scroll mobile */
 }
 
 .paletteColor {
@@ -96,8 +95,7 @@ select {
 }
 
 #paletteButtons button {
-    margin-right: 4px;
-    margin-bottom: 4px;
+    margin: 4px 4px 0 0;
 }
 </style>
 </head>
@@ -108,25 +106,25 @@ select {
 
 <div id="container">
 
-    <!-- LEFT PANEL ---------------------------- -->
+    <!-- LEFT PANEL -->
     <div class="panel">
 
         <div class="sectionTitle">1. Paramètres & génération</div>
 
-        Nom du niveau (id) :  
+        Nom du niveau (id) :
         <input id="levelName" type="text" placeholder="ex : cat_01">
 
-        Image source :  
+        Image source :
         <input id="imgInput" type="file" accept="image/png,image/jpeg">
 
-        Taille grille :  
+        Taille grille :
         <select id="gridSize">
             <option>50 x 50</option>
             <option>100 x 100</option>
             <option selected>200 x 200</option>
         </select>
 
-        Couleurs max (5-32) :  
+        Couleurs max (5-32) :
         <input id="maxColors" type="number" min="5" max="32" value="20">
 
         <button onclick="generateGrid()">Générer la grille & la palette</button>
@@ -134,35 +132,40 @@ select {
         <br><br>
         Grille générée : <span id="gridInfo">-</span>
 
-        <!-- PREVIEW -------------------------------- -->
+        <!-- PREVIEW -->
         <div class="sectionTitle" style="margin-top:20px;">2. Aperçu image</div>
 
-        Original (ratio respecté) :
+        Original :
         <div class="previewBox"><img id="previewOriginal"></div>
 
-        Pixelisé / réduit :
+        Pixelisé :
         <div class="previewBox"><img id="previewPixel"></div>
 
         Palette générée :
         <div id="palettePreview"></div>
 
         <br>
-        <button onclick="exportHidden()">Exporter hidden.png</button>
-        <button onclick="exportMask()">Exporter mask.png</button>
-        <button onclick="exportIndex()">Exporter indexMap.png</button>
-        <button onclick="exportPalette()">Exporter palette.json</button>
-        <button onclick="exportMeta()">Exporter meta.json</button>
+        <button onclick="exportHidden()">hidden.png</button>
+        <button onclick="exportMask()">mask.png</button>
+        <button onclick="exportIndex()">indexMap.png</button>
+        <button onclick="exportPalette()">palette.json</button>
+        <button onclick="exportMeta()">meta.json</button>
 
     </div>
 
-    <!-- RIGHT PANEL -------------------------------------------- -->
+    <!-- RIGHT PANEL -->
     <div class="bigpanel">
 
-        <div class="sectionTitle">3. Test de grattage (comme dans le jeu)</div>
+        <div class="sectionTitle">3. Test de grattage (mobile OK)</div>
 
-        Couleur active : <span id="activeColor">aucune</span>  
+        Couleur active :
+        <span id="activeColor">aucune</span>
+
         <br>
-        Révélé : <span id="revealedCount">0</span> / <span id="totalCount">0</span>
+        Révélé :
+        <span id="revealedCount">0</span> /
+        <span id="totalCount">0</span>
+
         <div style="height:10px; width:300px; background:#ddd; border-radius:5px; margin:10px 0;">
             <div id="progressBar" style="height:100%; width:0%; background:#6cc;"></div>
         </div>
@@ -184,14 +187,15 @@ let resizedCtx = resizedCanvas.getContext("2d");
 let pixelCanvas = document.getElementById("pixelCanvas");
 let px = pixelCanvas.getContext("2d");
 
-let LEVEL = [];           // grille d’index couleurs (0..N-1)
-let COLOR_PALETTE = [];   // liste {r,g,b}
-let active = null;        // index couleur active
+let LEVEL = [];
+let COLOR_PALETTE = [];
+let active = null;
 
 let revealed = 0;
 let totalCells = 0;
 
-const cellPx = 400; // taille du canvas scratch
+const cellPx = 400;
+let touchingCanvas = false;
 
 /*---------------------------------------------------
     LOAD IMAGE
@@ -208,20 +212,18 @@ document.getElementById("imgInput").addEventListener("change", (e)=>{
 });
 
 /*---------------------------------------------------
-    GENERATE GRID & PALETTE
+    GENERATE GRID
 ----------------------------------------------------*/
 function generateGrid() {
-
     if (!originalImg) {
         alert("Choisis une image !");
         return;
     }
 
-    let size = parseInt(document.getElementById("gridSize").value); // "200 x 200" -> 200
+    let size = parseInt(document.getElementById("gridSize").value);
     let maxC = parseInt(document.getElementById("maxColors").value);
     maxC = Math.max(5, Math.min(32, maxC || 20));
 
-    // resize image to square (ratio respected inside)
     resizedCanvas.width = size;
     resizedCanvas.height = size;
     resizedCtx.clearRect(0,0,size,size);
@@ -235,16 +237,13 @@ function generateGrid() {
     resizedCtx.imageSmoothingEnabled = false;
     resizedCtx.drawImage(originalImg, x, y, w, h);
 
-    // pixel preview (dans le cadre)
     document.getElementById("previewPixel").src = resizedCanvas.toDataURL();
 
-    // quantize colors
     let imgData = resizedCtx.getImageData(0,0,size,size);
     let data = imgData.data;
 
     COLOR_PALETTE = quantizeColors(data, maxC);
 
-    // rebuild LEVEL
     LEVEL = [];
     revealed = 0;
     totalCells = size * size;
@@ -258,18 +257,20 @@ function generateGrid() {
             let idx = (y*size + x)*4;
             let r=data[idx], g=data[idx+1], b=data[idx+2];
             let best = nearestColor(r,g,b);
-            row.push(best); // index de palette
+            row.push(best);
         }
         LEVEL.push(row);
     }
 
-    document.getElementById("gridInfo").textContent = size+"×"+size+", "+COLOR_PALETTE.length+" couleurs";
+    document.getElementById("gridInfo").textContent =
+        size+"×"+size+", "+COLOR_PALETTE.length+" couleurs";
+
     buildPaletteUI();
     drawMask();
 }
 
 /*---------------------------------------------------
-    QUANTIZATION (simple k-means light)
+    COLOR QUANTIZATION
 ----------------------------------------------------*/
 function quantizeColors(data, count){
     let colors = [];
@@ -277,13 +278,11 @@ function quantizeColors(data, count){
         colors.push([data[i],data[i+1],data[i+2]]);
     }
 
-    // random init
     let centroids = [];
     for(let i=0;i<count;i++){
         centroids.push(colors[Math.floor(Math.random()*colors.length)]);
     }
 
-    // 3 iterations
     for(let it=0;it<3;it++){
         let groups = Array.from({length:count}, ()=>[]);
 
@@ -341,13 +340,11 @@ function buildPaletteUI(){
     prev.innerHTML="";
 
     COLOR_PALETTE.forEach((c,i)=>{
-        // palette preview
         let div=document.createElement("div");
         div.className="paletteColor";
         div.style.background=`rgb(${c.r},${c.g},${c.b})`;
         prev.appendChild(div);
 
-        // button
         let btn=document.createElement("button");
         btn.textContent="#"+(i+1);
         btn.onclick=()=>{
@@ -359,7 +356,7 @@ function buildPaletteUI(){
 }
 
 /*---------------------------------------------------
-    DRAW MASK (canvas noir)
+    MASK
 ----------------------------------------------------*/
 function drawMask(){
     px.fillStyle="black";
@@ -367,10 +364,9 @@ function drawMask(){
 }
 
 /*---------------------------------------------------
-    SCRATCH / GRATTAGE
+    SCRATCH — SOURIS
 ----------------------------------------------------*/
-
-let scratchSize = 3; // rayon en "cases"
+let scratchSize = 3;
 
 pixelCanvas.addEventListener("mousemove", function(e){
     if(active===null) return;
@@ -380,27 +376,38 @@ pixelCanvas.addEventListener("mousemove", function(e){
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
 
-    let s = LEVEL.length;
-    let gridX = Math.floor(x / (cellPx/s));
-    let gridY = Math.floor(y / (cellPx/s));
-
-    revealAt(gridX,gridY);
+    scratchAt(x,y);
 });
 
-/* --- TACTILE MOBILE --- */
+
+/*---------------------------------------------------
+    SCRATCH — MOBILE (CORRIGÉ)
+----------------------------------------------------*/
 pixelCanvas.addEventListener("touchstart", function(e){
+    touchingCanvas = true;
     e.preventDefault();
     handleTouch(e);
 }, {passive:false});
 
 pixelCanvas.addEventListener("touchmove", function(e){
+    if (!touchingCanvas) return;
     e.preventDefault();
     handleTouch(e);
 }, {passive:false});
 
 pixelCanvas.addEventListener("touchend", function(e){
-    // rien de spécial
+    touchingCanvas = false;
 });
+
+pixelCanvas.addEventListener("touchcancel", function(e){
+    touchingCanvas = false;
+});
+
+document.addEventListener("touchmove", function(e){
+    if (touchingCanvas) {
+        e.preventDefault();
+    }
+}, {passive:false});
 
 function handleTouch(e){
     if(active===null) return;
@@ -411,33 +418,31 @@ function handleTouch(e){
     const x = t.clientX - rect.left;
     const y = t.clientY - rect.top;
 
-    let s = LEVEL.length;
-    let gridX = Math.floor(x / (cellPx/s));
-    let gridY = Math.floor(y / (cellPx/s));
-
-    revealAt(gridX, gridY);
+    scratchAt(x,y);
 }
 
-/* --- LOGIQUE DE RÉVÉLATION --- */
-function revealAt(cx,cy){
-    if(!LEVEL.length) return;
+
+/*---------------------------------------------------
+    SCRATCH LOGIC
+----------------------------------------------------*/
+function scratchAt(x,y){
     let s = LEVEL.length;
+    let gx = Math.floor(x / (cellPx/s));
+    let gy = Math.floor(y / (cellPx/s));
 
     for(let dy=-scratchSize; dy<=scratchSize; dy++){
         for(let dx=-scratchSize; dx<=scratchSize; dx++){
-            let x=cx+dx, y=cy+dy;
-            if(x<0||y<0||x>=s||y>=s) continue;
+            let X=gx+dx, Y=gy+dy;
+            if(X<0||Y<0||X>=s||Y>=s) continue;
+            if(LEVEL[Y][X]===-1) continue;
 
-            // si déjà révélé on ignore (valeur -1)
-            if(LEVEL[y][x]===-1) continue;
-
-            if(LEVEL[y][x]===active){
-                LEVEL[y][x]=-1;
+            if(LEVEL[Y][X]===active){
+                LEVEL[Y][X]=-1;
                 revealed++;
 
-                px.fillStyle=`rgb(${COLOR_PALETTE[active].r},${COLOR_PALETTE[active].g},${COLOR_PALETTE[active].b})`;
+                px.fillStyle = `rgb(${COLOR_PALETTE[active].r},${COLOR_PALETTE[active].g},${COLOR_PALETTE[active].b})`;
                 let w = cellPx / s;
-                px.fillRect(x*w, y*w, w, w);
+                px.fillRect(X*w, Y*w, w, w);
 
                 updateProgress();
             }
@@ -455,12 +460,10 @@ function updateProgress(){
     EXPORTS
 ----------------------------------------------------*/
 function exportHidden(){
-    if(!resizedCanvas.width) { alert("Rien à exporter."); return; }
     download(resizedCanvas.toDataURL(),"hidden.png");
 }
 
 function exportMask(){
-    if(!LEVEL.length) { alert("Rien à exporter."); return; }
     let c=document.createElement("canvas");
     c.width=LEVEL.length;
     c.height=LEVEL.length;
@@ -471,8 +474,6 @@ function exportMask(){
 }
 
 function exportIndex(){
-    if(!LEVEL.length) { alert("Rien à exporter."); return; }
-
     let size = LEVEL.length;
     let c=document.createElement("canvas");
     c.width=size;
@@ -480,28 +481,28 @@ function exportIndex(){
     let x=c.getContext("2d");
 
     let img=x.getImageData(0,0,size,size);
+
     for(let y=0;y<size;y++){
         for(let xx=0;xx<size;xx++){
             let id=(y*size+xx)*4;
             let col=LEVEL[y][xx];
-            if(col<0) col = 0; // au cas où on grattait avant d'exporter
+            if(col<0) col=0;
             img.data[id]=col;
             img.data[id+1]=col;
             img.data[id+2]=col;
             img.data[id+3]=255;
         }
     }
+
     x.putImageData(img,0,0);
     download(c.toDataURL(),"indexMap.png");
 }
 
 function exportPalette(){
-    if(!COLOR_PALETTE.length) { alert("Rien à exporter."); return; }
     downloadJSON(COLOR_PALETTE,"palette.json");
 }
 
 function exportMeta(){
-    if(!LEVEL.length) { alert("Rien à exporter."); return; }
     let meta = {
         name: document.getElementById("levelName").value || "level",
         size: LEVEL.length,
@@ -514,20 +515,17 @@ function download(dataURL,name){
     let a=document.createElement("a");
     a.href=dataURL;
     a.download=name;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
 }
 
 function downloadJSON(obj,name){
     let a=document.createElement("a");
     a.href="data:application/json,"+encodeURIComponent(JSON.stringify(obj,null,2));
     a.download=name;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
 }
 </script>
 
 </body>
 </html>
+
