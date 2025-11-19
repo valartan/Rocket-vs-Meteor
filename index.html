@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Scratch by Number – Jeu</title>
+  <title>Scratch by Number – Jeu complet</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -382,7 +382,7 @@
       transform: scale(1.10);
       border-width: 3px;
       border-color: #ff7ac4;
-      box-shadow: 0 0 10px rgba(255,122,196,0.9);
+      box-shadow: 0 0 10px rgba(255,122,196,0.8);
     }
 
     .backLink {
@@ -396,11 +396,6 @@
 
     .backLink span {
       font-size: 16px;
-    }
-
-    /* Small helper for hidden */
-    .hidden {
-      display: none;
     }
 
     @media (max-width: 520px) {
@@ -433,7 +428,7 @@
         <div class="globalProgressBar">
           <div id="globalProgressInner" class="globalProgressInner"></div>
         </div>
-        <div class="tag">Prototype – ossature du jeu (moteur scratch à brancher)</div>
+        <div class="tag">Prototype jouable – 1 niveau de démo (structure complète)</div>
       </div>
 
       <button id="btn-continue" class="btn btnPrimary" disabled>
@@ -490,7 +485,6 @@
 
       <div class="gameCard">
         <div class="gameCanvasWrap">
-          <!-- Ici on branchera ton moteur scratch -->
           <canvas id="gameCanvas" width="360" height="360"></canvas>
         </div>
 
@@ -502,9 +496,7 @@
           <input id="gameBrushSlider" class="brushSlider" type="range" min="1" max="15" value="3">
         </div>
 
-        <div class="paletteRow" id="gamePaletteRow">
-          <!-- Pastilles couleurs dynamiques -->
-        </div>
+        <div class="paletteRow" id="gamePaletteRow"></div>
       </div>
     </section>
   </main>
@@ -512,7 +504,7 @@
 
 <script>
   // -----------------------------
-  // DATA DÉMO – À remplacer plus tard par ton vrai JSON de niveaux
+  // DATA DÉMO – COLLECTIONS & NIVEAUX
   // -----------------------------
   const DEMO_DATA = {
     collections: [
@@ -520,53 +512,88 @@
         id: "kawaii",
         name: "Kawaii",
         emoji: "🌸",
-        totalLevels: 8,
         levels: [
-          { id: "kawaii_01", title: "Chat mignon" },
-          { id: "kawaii_02", title: "Panda bubble tea" },
-          { id: "kawaii_03", title: "Lapin sucré" },
-          { id: "kawaii_04", title: "Cupcake pastel" },
-          { id: "kawaii_05", title: "Sushi kawaii" },
-          { id: "kawaii_06", title: "Nuage heureux" },
-          { id: "kawaii_07", title: "Lune adorable" },
-          { id: "kawaii_08", title: "Étoile souriante" }
+          { id: "kawaii_01", title: "Cercle pastel" }
         ]
       },
       {
         id: "animals",
         name: "Animaux",
         emoji: "🐾",
-        totalLevels: 6,
         levels: [
-          { id: "animal_01", title: "Chat" },
-          { id: "animal_02", title: "Chien" },
-          { id: "animal_03", title: "Renard" },
-          { id: "animal_04", title: "Ours" },
-          { id: "animal_05", title: "Koala" },
-          { id: "animal_06", title: "Hérisson" }
-        ]
-      },
-      {
-        id: "nature",
-        name: "Nature",
-        emoji: "🌿",
-        totalLevels: 4,
-        levels: [
-          { id: "nature_01", title: "Montagne" },
-          { id: "nature_02", title: "Forêt" },
-          { id: "nature_03", title: "Cascade" },
-          { id: "nature_04", title: "Plage" }
+          { id: "animal_demo", title: "Bloc animal" }
         ]
       }
     ]
   };
 
-  // Simule des palettes de couleurs (en vrai, viendront de palette.json)
-  const DEMO_PALETTES = {
-    kawaii_01: ["#ffffff","#ffb6c1","#ff6fb5","#ffc93c","#a5d8ff"],
-    kawaii_02: ["#ffffff","#9ad0ff","#ff9a9a","#ffe28a","#b39bff"],
-    animal_01: ["#ffffff","#222222","#ffb347","#fbe8a6","#7f5539"],
-    default: ["#ffffff","#ff7ac4","#a971ff","#6cc6ff","#ffe28a"]
+  // 1 niveau de démo avec une grille générée proc.
+  // Plus tard => ce sera remplacé par les données exportées par ton Builder.
+  const LEVEL_CONTENT = {
+    kawaii_01: {
+      size: 32,
+      palette: [
+        {r:255,g:255,b:255}, // fond
+        {r:255,g:182,b:193}, // rose clair
+        {r:255,g:111,b:181}, // rose vif
+        {r:169,g:113,b:255}  // violet
+      ],
+      // Grille proc : cercles concentriques pastels
+      generateGrid: function() {
+        const size = this.size;
+        const grid = [];
+        const cx = size / 2;
+        const cy = size / 2;
+        const maxR = size * 0.48;
+        for (let y=0; y<size; y++) {
+          const row = [];
+          for (let x=0; x<size; x++) {
+            const dx = x - cx + 0.5;
+            const dy = y - cy + 0.5;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            let colIndex = 0;
+            if (d < maxR*0.3) colIndex = 2;         // centre rose vif
+            else if (d < maxR*0.6) colIndex = 1;    // anneau rose clair
+            else if (d < maxR) colIndex = 3;        // anneau violet
+            else colIndex = 0;                      // fond
+            row.push(colIndex);
+          }
+          grid.push(row);
+        }
+        return grid;
+      }
+    },
+    animal_demo: {
+      size: 24,
+      palette: [
+        {r:255,g:255,b:255}, // fond
+        {r:255,g:179,b:102}, // orange clair
+        {r:127,g:85,b:57},   // brun
+        {r:0,g:0,b:0}        // noir
+      ],
+      generateGrid: function() {
+        const size = this.size;
+        const grid = [];
+        const cx = size/2, cy = size/2;
+        for (let y=0;y<size;y++){
+          const row=[];
+          for(let x=0;x<size;x++){
+            let col = 0;
+            // tête
+            if (Math.abs(x-cx)<=6 && Math.abs(y-(cy-2))<=5) col=1;
+            // oreilles
+            if ((x===cx-5||x===cx+5) && (y<=cy-4 && y>=cy-7)) col=1;
+            // yeux
+            if ((x===cx-2||x===cx+2) && y===cy-3) col=3;
+            // museau
+            if (Math.abs(x-cx)<=2 && Math.abs(y-(cy+1))<=2) col=2;
+            row.push(col);
+          }
+          grid.push(row);
+        }
+        return grid;
+      }
+    }
   };
 
   // -----------------------------
@@ -585,55 +612,81 @@
   }
 
   // -----------------------------
-  // GESTION PROGRESSION GLOBALE (FAKE POUR L’INSTANT)
+  // PROGRESSION GLOBALE (simple)
   // -----------------------------
   function computeGlobalProgress() {
-    // plus tard : lire localStorage et compter les niveaux terminés
-    const totalLevels = DEMO_DATA.collections.reduce((sum, c) => sum + c.levels.length, 0);
-    const completed = 0; // placeholder
-    return { completed, totalLevels };
+    const total = DEMO_DATA.collections.reduce((sum,c)=>sum + c.levels.length, 0);
+    let completed = 0;
+    try {
+      const raw = localStorage.getItem("sbn_completed_levels");
+      if (raw){
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) completed = arr.length;
+      }
+    } catch{}
+    if (completed>total) completed=total;
+    return {completed,total};
   }
 
   function refreshGlobalProgressUI() {
-    const { completed, totalLevels } = computeGlobalProgress();
+    const {completed,total} = computeGlobalProgress();
     const label = document.getElementById("globalProgressLabel");
     const bar = document.getElementById("globalProgressInner");
-    label.textContent = `${completed} / ${totalLevels} images`;
-    let perc = totalLevels > 0 ? (completed / totalLevels) * 100 : 0;
-    bar.style.width = `${perc}%`;
+    label.textContent = `${completed} / ${total} images`;
+    let perc = total>0 ? (completed/total)*100 : 0;
+    bar.style.width = perc + "%";
   }
 
   // -----------------------------
-  // HOME SCREEN LOGIC
+  // SAUVEGARDE "DERNIER NIVEAU"
   // -----------------------------
-  const btnContinue = document.getElementById("btn-continue");
-  const btnDaily = document.getElementById("btn-daily");
-  const btnCollections = document.getElementById("btn-collections");
-
   function loadLastPlayed() {
     try {
-      const raw = localStorage.getItem("scratch_last_level");
+      const raw = localStorage.getItem("sbn_last_level");
       if (!raw) return null;
       return JSON.parse(raw);
-    } catch {
-      return null;
-    }
+    } catch {return null;}
   }
-
   function saveLastPlayed(collectionId, levelId) {
-    const data = { collectionId, levelId, timestamp: Date.now() };
-    localStorage.setItem("scratch_last_level", JSON.stringify(data));
+    const obj = {collectionId,levelId,time:Date.now()};
+    localStorage.setItem("sbn_last_level", JSON.stringify(obj));
+  }
+  function markLevelCompleted(levelId) {
+    let arr=[];
+    try {
+      const raw=localStorage.getItem("sbn_completed_levels");
+      if (raw) arr=JSON.parse(raw);
+    } catch{}
+    if (!Array.isArray(arr)) arr=[];
+    if (!arr.includes(levelId)) arr.push(levelId);
+    localStorage.setItem("sbn_completed_levels", JSON.stringify(arr));
+  }
+  function isLevelCompleted(levelId) {
+    try {
+      const raw = localStorage.getItem("sbn_completed_levels");
+      if (!raw) return false;
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return false;
+      return arr.includes(levelId);
+    } catch {return false;}
   }
 
   function refreshContinueButton() {
+    const btnContinue = document.getElementById("btn-continue");
     const last = loadLastPlayed();
     if (!last) {
       btnContinue.disabled = true;
       return;
     }
     btnContinue.disabled = false;
-    btnContinue.textContent = "▶ Continuer";
   }
+
+  // -----------------------------
+  // HOME SCREEN
+  // -----------------------------
+  const btnContinue = document.getElementById("btn-continue");
+  const btnDaily = document.getElementById("btn-daily");
+  const btnCollections = document.getElementById("btn-collections");
 
   btnCollections.addEventListener("click", () => {
     buildCollectionsList();
@@ -641,57 +694,55 @@
   });
 
   btnDaily.addEventListener("click", () => {
-    // Pour l’instant : prend simplement le premier niveau de la première collection
-    const firstCol = DEMO_DATA.collections[0];
-    const firstLevel = firstCol.levels[0];
-    startGame(firstCol.id, firstLevel.id);
+    // Défi du jour : pour l'instant, lance kawaii_01
+    const col=DEMO_DATA.collections[0];
+    const lvl=col.levels[0];
+    startGame(col.id,lvl.id);
   });
 
   btnContinue.addEventListener("click", () => {
-    const last = loadLastPlayed();
+    const last=loadLastPlayed();
     if (!last) return;
-    startGame(last.collectionId, last.levelId);
+    startGame(last.collectionId,last.levelId);
   });
 
   // -----------------------------
-  // COLLECTIONS SCREEN LOGIC
+  // COLLECTIONS SCREEN
   // -----------------------------
   const collectionsListEl = document.getElementById("collectionsList");
-  const backFromCollections = document.getElementById("back-from-collections");
-
-  backFromCollections.addEventListener("click", () => {
+  document.getElementById("back-from-collections").addEventListener("click", () => {
     showScreen("home");
   });
 
   function buildCollectionsList() {
     collectionsListEl.innerHTML = "";
     DEMO_DATA.collections.forEach(col => {
-      const card = document.createElement("div");
-      card.className = "collectionCard";
-      card.dataset.id = col.id;
+      const card=document.createElement("div");
+      card.className="collectionCard";
 
-      const thumb = document.createElement("div");
-      thumb.className = "collectionThumb";
-      thumb.textContent = col.emoji || "🎨";
+      const thumb=document.createElement("div");
+      thumb.className="collectionThumb";
+      thumb.textContent=col.emoji || "🎨";
 
-      const info = document.createElement("div");
-      info.className = "collectionInfo";
+      const info=document.createElement("div");
+      info.className="collectionInfo";
 
-      const name = document.createElement("div");
-      name.className = "collectionName";
-      name.textContent = col.name;
+      const name=document.createElement("div");
+      name.className="collectionName";
+      name.textContent=col.name;
 
-      const meta = document.createElement("div");
-      meta.className = "collectionMeta";
-      meta.textContent = `${col.levels.length} images`;
+      const meta=document.createElement("div");
+      meta.className="collectionMeta";
+      const completedLevels = col.levels.filter(l=>isLevelCompleted(l.id)).length;
+      meta.textContent = `${completedLevels}/${col.levels.length} complétées`;
 
       info.appendChild(name);
       info.appendChild(meta);
 
-      const right = document.createElement("div");
-      right.style.fontSize = "11px";
-      right.style.color = "#777";
-      right.textContent = "0% complété"; // placeholder
+      const right=document.createElement("div");
+      right.style.fontSize="11px";
+      right.style.color="#777";
+      right.textContent=">";
 
       card.appendChild(thumb);
       card.appendChild(info);
@@ -706,49 +757,45 @@
   }
 
   // -----------------------------
-  // LEVELS SCREEN LOGIC
+  // LEVELS SCREEN
   // -----------------------------
-  const levelsTitleEl = document.getElementById("levelsTitle");
-  const levelsSubtitleEl = document.getElementById("levelsSubtitle");
-  const levelsGridEl = document.getElementById("levelsGrid");
-  const backFromLevels = document.getElementById("back-from-levels");
-
+  const levelsTitleEl=document.getElementById("levelsTitle");
+  const levelsSubtitleEl=document.getElementById("levelsSubtitle");
+  const levelsGridEl=document.getElementById("levelsGrid");
   let currentCollection = null;
 
-  backFromLevels.addEventListener("click", () => {
+  document.getElementById("back-from-levels").addEventListener("click", () => {
     showScreen("collections");
   });
 
   function openCollection(collectionId) {
-    currentCollection = DEMO_DATA.collections.find(c => c.id === collectionId);
+    currentCollection = DEMO_DATA.collections.find(c=>c.id===collectionId);
     if (!currentCollection) return;
-
     levelsTitleEl.textContent = currentCollection.name;
-    levelsSubtitleEl.textContent = `${currentCollection.levels.length} images à gratter`;
+    levelsSubtitleEl.textContent = `${currentCollection.levels.length} images`;
 
     buildLevelsGrid(currentCollection);
-
     showScreen("levels");
   }
 
   function buildLevelsGrid(collection) {
     levelsGridEl.innerHTML = "";
     collection.levels.forEach((lvl, index) => {
-      const card = document.createElement("div");
-      card.className = "levelCard";
-      card.dataset.levelId = lvl.id;
+      const card=document.createElement("div");
+      card.className="levelCard";
 
-      const thumb = document.createElement("div");
-      thumb.className = "levelThumb";
-      thumb.textContent = lvl.title;
+      const thumb=document.createElement("div");
+      thumb.className="levelThumb";
+      thumb.textContent=lvl.title;
 
-      const title = document.createElement("div");
-      title.className = "levelTitle";
-      title.textContent = `#${index+1}`;
+      const title=document.createElement("div");
+      title.className="levelTitle";
+      title.textContent=`#${index+1}`;
 
-      const status = document.createElement("div");
-      status.className = "levelStatus";
-      status.textContent = "Non commencé"; // placeholder
+      const status=document.createElement("div");
+      status.className="levelStatus";
+      if (isLevelCompleted(lvl.id)) status.textContent="Terminé ✓";
+      else status.textContent="Non commencé";
 
       card.appendChild(thumb);
       card.appendChild(title);
@@ -763,7 +810,7 @@
   }
 
   // -----------------------------
-  // GAME SCREEN LOGIC (SQUELETTE)
+  // GAME SCREEN + SCRATCH ENGINE
   // -----------------------------
   const backFromGame = document.getElementById("back-from-game");
   const gameTitleEl = document.getElementById("gameTitle");
@@ -778,18 +825,31 @@
   let currentGame = {
     collectionId: null,
     levelId: null,
+    size: 0,
+    grid: [],
+    palette: [],
+    remainingPerColor: [],
+    totalCells: 0,
+    revealed: 0,
     brushSize: 3,
-    activeColorIndex: null
+    activeColorIndex: null,
+    completed: false
   };
 
   backFromGame.addEventListener("click", () => {
-    showScreen("levels");
+    // Si le niveau est complété, mettre à jour la progression globale
+    refreshGlobalProgressUI();
+    if (currentCollection) {
+      buildLevelsGrid(currentCollection);
+      showScreen("levels");
+    } else {
+      showScreen("collections");
+    }
   });
 
   gameBrushSlider.addEventListener("input", () => {
     currentGame.brushSize = parseInt(gameBrushSlider.value,10);
     gameBrushVal.textContent = currentGame.brushSize;
-    // plus tard : on synchronisera ça avec ton moteur scratch
   });
 
   function startGame(collectionId, levelId) {
@@ -800,47 +860,191 @@
 
     currentGame.collectionId = collectionId;
     currentGame.levelId = levelId;
+    currentGame.brushSize = parseInt(gameBrushSlider.value,10);
+    currentGame.completed = false;
 
     saveLastPlayed(collectionId, levelId);
     refreshContinueButton();
 
-    // UI :
     gameTitleEl.textContent = lvl.title;
     gameSubtitleEl.textContent = col.name;
-    gameProgressPercentEl.textContent = "0%";
-    gameRemainingEl.textContent = "???"; // sera mis à jour plus tard avec moteur scratch
 
-    // Placeholder : remplir le canvas en noir pour simuler le masque
-    const ctx = gameCanvas.getContext("2d");
-    ctx.fillStyle = "black";
-    ctx.fillRect(0,0,gameCanvas.width,gameCanvas.height);
-
-    // palette d’exemple
-    const palette = DEMO_PALETTES[levelId] || DEMO_PALETTES.default;
-    buildGamePalette(palette);
-
+    loadLevelData(levelId);
     showScreen("game");
   }
 
-  function buildGamePalette(colors) {
+  // Création de la grille et de la palette pour un niveau donné
+  function loadLevelData(levelId) {
+    const content = LEVEL_CONTENT[levelId];
+    if (!content) {
+      // fallback : minigrille 10x10 blanche
+      const size = 10;
+      currentGame.size = size;
+      currentGame.palette = [{r:255,g:255,b:255}];
+      currentGame.grid = Array.from({length:size},()=>Array(size).fill(0));
+    } else {
+      const grid = content.generateGrid();
+      currentGame.size = content.size;
+      currentGame.palette = content.palette;
+      currentGame.grid = grid;
+    }
+
+    const size = currentGame.size;
+    currentGame.revealed = 0;
+    currentGame.totalCells = size * size;
+
+    const counts = new Array(currentGame.palette.length).fill(0);
+    for (let y=0;y<size;y++){
+      for(let x=0;x<size;x++){
+        const idx=currentGame.grid[y][x];
+        if (idx>=0 && idx<counts.length) counts[idx]++;
+      }
+    }
+    currentGame.remainingPerColor = counts;
+
+    // Canvas : remplir en noir
+    const ctx = gameCanvas.getContext("2d");
+    ctx.clearRect(0,0,gameCanvas.width,gameCanvas.height);
+    ctx.fillStyle="black";
+    ctx.fillRect(0,0,gameCanvas.width,gameCanvas.height);
+
+    buildGamePalette();
+    updateGameUI();
+  }
+
+  function buildGamePalette() {
     gamePaletteRow.innerHTML = "";
-    colors.forEach((col, idx) => {
-      const dot = document.createElement("div");
-      dot.className = "dot";
-      dot.style.background = col;
+    currentGame.activeColorIndex = null;
+
+    currentGame.palette.forEach((c,i) => {
+      const dot=document.createElement("div");
+      dot.className="dot";
+      dot.style.background=`rgb(${c.r},${c.g},${c.b})`;
       dot.addEventListener("click", () => {
-        document.querySelectorAll("#gamePaletteRow .dot").forEach(d => d.classList.remove("active"));
+        document.querySelectorAll("#gamePaletteRow .dot").forEach(d=>d.classList.remove("active"));
         dot.classList.add("active");
-        currentGame.activeColorIndex = idx;
-        // plus tard : on informera ton moteur scratch de la couleur active
+        currentGame.activeColorIndex = i;
+        updateGameUI();
       });
       gamePaletteRow.appendChild(dot);
     });
-    // active la première couleur par défaut
+
     const firstDot = gamePaletteRow.querySelector(".dot");
     if (firstDot) {
       firstDot.classList.add("active");
       currentGame.activeColorIndex = 0;
+    }
+    updateGameUI();
+  }
+
+  function updateGameUI() {
+    const total = currentGame.totalCells;
+    const revealed = currentGame.revealed;
+    const p = total>0 ? Math.floor((revealed/total)*100) : 0;
+    gameProgressPercentEl.textContent = p + "%";
+
+    if (currentGame.activeColorIndex==null) {
+      gameRemainingEl.textContent = "0";
+    } else {
+      gameRemainingEl.textContent = currentGame.remainingPerColor[currentGame.activeColorIndex] || 0;
+    }
+  }
+
+  // SCRATCH ENGINE
+  let isMouseDown = false;
+  let isTouching = false;
+
+  gameCanvas.addEventListener("mousedown", (e)=>{
+    isMouseDown=true;
+    scratchAtEvent(e.clientX,e.clientY);
+  });
+  document.addEventListener("mouseup", ()=>{
+    isMouseDown=false;
+  });
+  gameCanvas.addEventListener("mousemove", (e)=>{
+    if(!isMouseDown) return;
+    scratchAtEvent(e.clientX,e.clientY);
+  });
+
+  gameCanvas.addEventListener("touchstart", (e)=>{
+    isTouching=true;
+    e.preventDefault();
+    const t=e.touches[0];
+    scratchAtEvent(t.clientX,t.clientY);
+  }, {passive:false});
+  gameCanvas.addEventListener("touchmove",(e)=>{
+    if(!isTouching) return;
+    e.preventDefault();
+    const t=e.touches[0];
+    scratchAtEvent(t.clientX,t.clientY);
+  }, {passive:false});
+  gameCanvas.addEventListener("touchend",()=>{
+    isTouching=false;
+  });
+  gameCanvas.addEventListener("touchcancel",()=>{
+    isTouching=false;
+  });
+
+  function scratchAtEvent(clientX,clientY) {
+    if (currentGame.activeColorIndex==null) return;
+    const rect = gameCanvas.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+
+    // Conversion coordonnées écran -> coordonnées canvas interne (360x360)
+    const scaleX = gameCanvas.width / rect.width;
+    const scaleY = gameCanvas.height / rect.height;
+    const cx = px * scaleX;
+    const cy = py * scaleY;
+
+    const size = currentGame.size;
+    const cellSize = gameCanvas.width / size;
+
+    const gx = Math.floor(cx / cellSize);
+    const gy = Math.floor(cy / cellSize);
+
+    scratchAtGrid(gx,gy);
+  }
+
+  function scratchAtGrid(cx,cy) {
+    const size = currentGame.size;
+    const active = currentGame.activeColorIndex;
+    const brush = currentGame.brushSize;
+    const ctx = gameCanvas.getContext("2d");
+    const cellSize = gameCanvas.width / size;
+
+    for (let dy=-brush; dy<=brush; dy++){
+      for (let dx=-brush; dx<=brush; dx++){
+        const X = cx+dx;
+        const Y = cy+dy;
+        if (X<0||Y<0||X>=size||Y>=size) continue;
+
+        const val = currentGame.grid[Y][X];
+        if (val !== active) continue;
+
+        // révéler
+        currentGame.grid[Y][X] = -1;
+        currentGame.revealed++;
+        currentGame.remainingPerColor[active]--;
+
+        const col = currentGame.palette[active];
+        ctx.fillStyle = `rgb(${col.r},${col.g},${col.b})`;
+        ctx.fillRect(X*cellSize, Y*cellSize, cellSize, cellSize);
+      }
+    }
+
+    updateGameUI();
+    checkCompletion();
+  }
+
+  function checkCompletion() {
+    if (currentGame.completed) return;
+    if (currentGame.revealed >= currentGame.totalCells) {
+      currentGame.completed = true;
+      markLevelCompleted(currentGame.levelId);
+      refreshGlobalProgressUI();
+      // Petit feedback simple pour l’instant
+      alert("Image complétée ! 🎉");
     }
   }
 
